@@ -1,0 +1,13 @@
+CREATE TABLE TypeMetadata (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL
+);
+
+CREATE TABLE File (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    link VARCHAR(255),
+    is_deleted BOOLEAN NOT NULL
+);
+
+

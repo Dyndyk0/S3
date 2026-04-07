@@ -1,0 +1,41 @@
+#version: "3.8"
+
+services:
+  minio:
+    image: minio/minio
+    command: server /data/minio --console-address ":9001"
+    ports:
+      - 9000:9000
+      - 9001:9001
+    environment:
+      - MINIO_ROOT_USER=minioadmin
+      - MINIO_ROOT_PASSWORD=minioadmin
+    networks:
+      - minio-local
+  db:
+    image: postgres:18-alpine
+    container_name: postgres
+    environment:
+      POSTGRES_USER: postgresadmin
+      POSTGRES_PASSWORD: postgresadmin
+      POSTGRES_DB: Meta
+    ports:
+      - 5432:5432
+    volumes:
+      - ./init-db:/docker-entrypoint-initdb.d
+    networks:
+      - minio-local
+  server:
+    container_name: server
+    build: .
+    ports:
+      - 8080:8080
+    networks:
+      - minio-local
+    env_file: 
+      - .env
+
+
+networks:
+  minio-local:
+    driver: bridge

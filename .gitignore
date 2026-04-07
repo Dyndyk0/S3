@@ -1,0 +1,9 @@
+vs/
+bin/
+obj/
+Properties/
+.env
+.git/
+index.html
+XPEHb.sln
+XPEHb.csproj.user
