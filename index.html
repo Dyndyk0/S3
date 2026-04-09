@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>XPEHb Cloud Manager</title>
+</head>
+<body>
+    <h1>XPEHb Cloud Manager</h1>
+
+    <!-- СЕКЦИЯ 1: Управление метаданными -->
+    <fieldset>
+        <legend>Управление метаданными</legend>
+        <div>
+            <h3>Создать тип</h3>
+            <input type="text" id="newTypeName" placeholder="Имя типа (например, Отдел)">
+            <button onclick="createType()">Создать тип</button>
+        </div>
+        <hr>
+        <div>
+            <h3>Создать категорию</h3>
+            <select id="typeSelectForCat"></select>
+            <input type="text" id="newCatName" placeholder="Имя категории">
+            <button onclick="createCategory()">Создать категорию</button>
+        </div>
+    </fieldset>
+
+    <br>
+
+    <!-- СЕКЦИЯ 2: Загрузка файла -->
+    <fieldset>
+        <legend>Загрузка нового файла</legend>
+        <input type="file" id="fileInput">
+        <div id="tagSelectors">
+            <p>Выберите теги (категории):</p>
+            <!-- Сюда добавятся чекбоксы категорий -->
+        </div>
+        <button onclick="uploadFile()" id="uploadBtn">Загрузить в облако и БД</button>
+    </fieldset>
+
+    <br>
+
+    <!-- СЕКЦИЯ 3: Списки файлов -->
+    <div style="display: flex; gap: 20px;">
+        <div style="flex: 1;">
+            <h2>Файлы в Базе (SQL)</h2>
+            <button onclick="loadDbFiles()">Обновить список БД</button>
+            <table border="1" id="dbFilesTable" style="width: 100%; text-align: left;">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Имя</th>
+                        <th>Теги</th>
+                        <th>Действие</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+
+        <div style="flex: 1;">
+            <h2>Файлы в MinIO (Storage)</h2>
+            <button onclick="loadMinioFiles()">Обновить список MinIO</button>
+            <ul id="minioFilesList"></ul>
+        </div>
+    </div>
+
+    <script>
+        let allMetadata = { types: [], cats: [] };
+
+        // Загрузка типов и категорий для выпадающих списков и чекбоксов
+        async function loadMetadata() {
+            const res = await fetch('/meta-data');
+            allMetadata = await res.json();
+            
+            // Заполняем выбор типов для создания категорий
+            const typeSelect = document.getElementById('typeSelectForCat');
+            typeSelect.innerHTML = allMetadata.types.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+
+            // Заполняем чекбоксы категорий для загрузки файла
+            const tagContainer = document.getElementById('tagSelectors');
+            tagContainer.innerHTML = '<p>Выберите категории:</p>';
+            allMetadata.cats.forEach(cat => {
+                const typeName = allMetadata.types.find(t => t.id === cat.typeMetadataId)?.name || '???';
+                tagContainer.innerHTML += `
+                    <label>
+                        <input type="checkbox" name="fileTags" value="${cat.id}"> 
+                        [${typeName}] ${cat.name}
+                    </label><br>`;
+            });
+        }
+
+        async function createType() {
+            const name = document.getElementById('newTypeName').value;
+            await fetch(`/types?name=${encodeURIComponent(name)}`, { method: 'POST' });
+            loadMetadata();
+        }
+
+        async function createCategory() {
+            const typeId = document.getElementById('typeSelectForCat').value;
+            const name = document.getElementById('newCatName').value;
+            await fetch(`/categories?typeId=${typeId}&name=${encodeURIComponent(name)}`, { method: 'POST' });
+            loadMetadata();
+        }
+
+        async function uploadFile() {
+            const fileInput = document.getElementById('fileInput');
+            if (fileInput.files.length === 0) return alert('Выберите файл');
+            
+            const file = fileInput.files[0];
+            const checkedCats = Array.from(document.querySelectorAll('input[name="fileTags"]:checked')).map(cb => parseInt(cb.value));
+
+            document.getElementById('uploadBtn').disabled = true;
+            document.getElementById('uploadBtn').innerText = 'Загрузка...';
+
+            try {
+                // 1. Получаем URL для загрузки и сохраняем мету в БД
+                // ВАЖНО: Мы передаем Tags как массив объектов TagUploadModel (TypeId, CatId)
+                // Для упрощения UI мы берем CatId, а TypeId бекенд найдет сам (как у вас в DbService)
+                const uploadRes = await fetch('/uploadUrl', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        fileName: file.name,
+                        tags: checkedCats.map(id => ({ catId: id, typeId: 0 })) // typeId заполнится в БД
+                    })
+                });
+                const { uploadUrl } = await uploadRes.json();
+
+                // 2. Загружаем сам файл в MinIO
+                await fetch(uploadUrl, {
+                    method: 'PUT',
+                    body: file
+                });
+
+                alert('Файл успешно загружен!');
+                loadDbFiles();
+                loadMinioFiles();
+            } catch (e) {
+                alert('Ошибка: ' + e.message);
+            } finally {
+                document.getElementById('uploadBtn').disabled = false;
+                document.getElementById('uploadBtn').innerText = 'Загрузить в облако и БД';
+            }
+        }
+
+        async function loadDbFiles() {
+            const res = await fetch('/files');
+            const files = await res.json();
+            const tbody = document.querySelector('#dbFilesTable tbody');
+            tbody.innerHTML = files.map(f => `
+                <tr>
+                    <td>${f.id}</td>
+                    <td>${f.name}</td>
+                    <td>${f.tags.map(t => `<b>${t.type}</b>:${t.cat}`).join(', ')}</td>
+                    <td><button onclick="deleteFile('${f.link}')">Удалить</button></td>
+                </tr>
+            `).join('');
+        }
+
+        async function loadMinioFiles() {
+            const res = await fetch('/filesMinio');
+            const files = await res.json();
+            const list = document.getElementById('minioFilesList');
+            // MinioFileDto: Key, Size, LastModified
+            list.innerHTML = files.map(f => `
+                <li>
+                    ${f.key} (${(f.size/1024).toFixed(2)} KB) 
+                    <button onclick="downloadFile('${f.key}')">Скачать</button>
+                </li>
+            `).join('');
+        }
+
+        async function deleteFile(link) {
+            if (!confirm('Удалить файл?')) return;
+            await fetch(`/delete?file=${encodeURIComponent(link)}`, { method: 'DELETE' });
+            loadDbFiles();
+            loadMinioFiles();
+        }
+
+        async function downloadFile(name) {
+            const res = await fetch(`/downloadUrl?file=${encodeURIComponent(name)}`);
+            const { url } = await res.json();
+            window.open(url, '_blank');
+        }
+
+        // Инициализация при загрузке страницы
+        loadMetadata();
+        loadDbFiles();
+        loadMinioFiles();
+    </script>
+</body>
+</html>
