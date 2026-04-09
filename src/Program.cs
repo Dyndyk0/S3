@@ -31,6 +31,18 @@ app.MapPost("/uploadUrl", async (UploadRequest req, MinioService storage, DbServ
     return Results.Ok(new { uploadUrl });
 });
 
+// POST /types
+app.MapPost("/types", async (string name, DbService db) => {
+    await db.CreateTypeAsync(name);
+    return Results.Ok();
+});
+
+// POST /categories
+app.MapPost("/categories", async (int typeId, string name, DbService db) => {
+    await db.CreateCategoryAsync(typeId, name);
+    return Results.Ok();
+});
+
 // GET /files
 app.MapGet("/files", async (DbService db) => {
     var files = await db.GetFilesAsync();

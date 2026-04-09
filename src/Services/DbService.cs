@@ -95,4 +95,14 @@ public class DbService
         await db.ExecuteAsync("DELETE FROM Metadata WHERE file_id IN (SELECT id FROM File WHERE link = @filename)", new { filename });
         await db.ExecuteAsync("DELETE FROM File WHERE link = @filename", new { filename });
     }
+
+    public async Task CreateTypeAsync(string name) {
+        using var db = CreateConnection();
+        await db.ExecuteAsync("INSERT INTO TypeMetadata (name) VALUES (@name)", new { name });
+    }
+
+    public async Task CreateCategoryAsync(int typeId, string name) {
+        using var db = CreateConnection();
+        await db.ExecuteAsync("INSERT INTO CategoryMetadata (typeMetadata_id, name) VALUES (@typeId, @name)", new { typeId, name });
+    }
 }
