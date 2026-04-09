@@ -7,7 +7,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddMinio(options => {
     options.WithEndpoint(Environment.GetEnvironmentVariable("MINIO_HOST") + ":" + Environment.GetEnvironmentVariable("MINIO_PORT"));
     options.WithCredentials(Environment.GetEnvironmentVariable("MINIO_USER"), Environment.GetEnvironmentVariable("MINIO_PASSWORD"));
-    options.WithCredentials(Environment.GetEnvironmentVariable("ACCESS_KEY"), Environment.GetEnvironmentVariable("SECRET_KEY"));
+    //options.WithCredentials(Environment.GetEnvironmentVariable("ACCESS_KEY"), Environment.GetEnvironmentVariable("SECRET_KEY"));
     options.WithSSL(false);
 });
 
@@ -53,13 +53,7 @@ app.MapGet("/files", async (DbService db) => {
 app.MapGet("/filesMinio", async (MinioService storage) =>
 {
     var files = await storage.ListAllFilesAsync();
-    
-    var html = "<h1>Файлы в MinIO</h1><ul>" + 
-               string.Join("", files.Select(f => 
-                   $"<li><b>{f.Key}</b> — {f.Size} байт (изменен: {f.LastModified})</li>")) + 
-               "</ul>";
-
-    return Results.Content(html, "text/html");
+    return Results.Ok(files);
 });
 
 // GET /downloadUrl

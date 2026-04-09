@@ -4,7 +4,7 @@ namespace XPEHb.Models;
 public record TagDto(int TypeId, string Type, int CatId, string Cat);
 
 public class FileViewDto {
-    [JsonIgnore]
+    //[JsonIgnore]
     public int Id { get; set; }
     public string Name { get; set; }
     public string Link { get; set; }
