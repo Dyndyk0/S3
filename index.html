@@ -63,7 +63,7 @@
 
         async function loadMetadata() {
             try {
-                const res = await fetch('/server/meta-data');
+                const res = await fetch('/meta-data');
                 allMetadata = await res.json();
                 
                 document.getElementById('typeSelectForCat').innerHTML = 
@@ -85,7 +85,7 @@
         async function createType() {
             const name = document.getElementById('newTypeName').value;
             if(!name) return;
-            await fetch(`/server/types?name=${encodeURIComponent(name)}`, { method: 'POST' });
+            await fetch(`/types?name=${encodeURIComponent(name)}`, { method: 'POST' });
             loadMetadata();
         }
 
@@ -93,7 +93,7 @@
             const typeId = document.getElementById('typeSelectForCat').value;
             const name = document.getElementById('newCatName').value;
             if(!name) return;
-            await fetch(`/server/categories?typeId=${typeId}&name=${encodeURIComponent(name)}`, { method: 'POST' });
+            await fetch(`/categories?typeId=${typeId}&name=${encodeURIComponent(name)}`, { method: 'POST' });
             loadMetadata();
         }
 
@@ -109,7 +109,7 @@
             btn.innerText = 'Загрузка...';
 
             try {
-                const response = await fetch('/server/uploadUrl', {
+                const response = await fetch('/uploadUrl', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -145,7 +145,7 @@
         }
 
         async function loadDbFiles() {
-            const res = await fetch('/server/files');
+            const res = await fetch('/files');
             const files = await res.json();
             const tbody = document.querySelector('#dbFilesTable tbody');
             tbody.innerHTML = files.map(f => `
@@ -158,7 +158,7 @@
         }
 
         async function loadMinioFiles() {
-            const res = await fetch('/server/filesMinio');
+            const res = await fetch('/filesMinio');
             const files = await res.json();
             const list = document.getElementById('minioFilesList');
             list.innerHTML = files.map(f => `
@@ -171,13 +171,13 @@
 
         async function deleteFile(name) {
             if (!confirm('Удалить?')) return;
-            await fetch(`/server/delete?file=${encodeURIComponent(name)}`, { method: 'DELETE' });
+            await fetch(`/delete?file=${encodeURIComponent(name)}`, { method: 'DELETE' });
             loadDbFiles();
             loadMinioFiles();
         }
 
         async function downloadFile(name) {
-            const res = await fetch(`/server/downloadUrl?file=${encodeURIComponent(name)}`);
+            const res = await fetch(`/downloadUrl?file=${encodeURIComponent(name)}`);
             const { url } = await res.json();
             window.open(url, '_blank');
         }
