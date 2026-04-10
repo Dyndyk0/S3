@@ -11,7 +11,6 @@ builder.Services.AddMinio(options => {
     options.WithSSL(false);
 });
 
-// Регистрация сервисов
 builder.Services.AddScoped<MinioService>();
 builder.Services.AddScoped<DbService>();
 

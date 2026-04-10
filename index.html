@@ -63,7 +63,7 @@
 
         async function loadMetadata() {
             try {
-                const res = await fetch('/meta-data');
+                const res = await fetch('/server/meta-data');
                 allMetadata = await res.json();
                 
                 document.getElementById('typeSelectForCat').innerHTML = 
@@ -85,7 +85,7 @@
         async function createType() {
             const name = document.getElementById('newTypeName').value;
             if(!name) return;
-            await fetch(`/types?name=${encodeURIComponent(name)}`, { method: 'POST' });
+            await fetch(`/server/types?name=${encodeURIComponent(name)}`, { method: 'POST' });
             loadMetadata();
         }
 
@@ -93,7 +93,7 @@
             const typeId = document.getElementById('typeSelectForCat').value;
             const name = document.getElementById('newCatName').value;
             if(!name) return;
-            await fetch(`/categories?typeId=${typeId}&name=${encodeURIComponent(name)}`, { method: 'POST' });
+            await fetch(`/server/categories?typeId=${typeId}&name=${encodeURIComponent(name)}`, { method: 'POST' });
             loadMetadata();
         }
 
@@ -109,9 +109,7 @@
             btn.innerText = 'Загрузка...';
 
             try {
-                // ШАГ 1: Регистрация в БД и получение Presigned URL
-                // Используем PascalCase (FileName, Tags, CatId), так как C# Record-ы по умолчанию ждут их так
-                const response = await fetch('/uploadUrl', {
+                const response = await fetch('/server/uploadUrl', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -123,8 +121,6 @@
                 if (!response.ok) throw new Error('Ошибка сервера при получении URL');
                 const { uploadUrl } = await response.json();
 
-                // ШАГ 2: Загрузка тела файла напрямую в MinIO
-                // ВАЖНО: не добавляем лишних заголовков (Content-Type), если их не требовал сервер
                 const minioRes = await fetch(uploadUrl, {
                     method: 'PUT',
                     body: file
@@ -149,20 +145,20 @@
         }
 
         async function loadDbFiles() {
-            const res = await fetch('/files');
+            const res = await fetch('/server/files');
             const files = await res.json();
             const tbody = document.querySelector('#dbFilesTable tbody');
             tbody.innerHTML = files.map(f => `
                 <tr>
                     <td>${f.name}</td>
                     <td>${(f.tags || []).map(t => `[${t.type}] ${t.cat}`).join(', ')}</td>
-                    <td><button onclick="deleteFile('${f.link}')">Удалить</button></td>
+                    <td><button onclick="deleteFile('${f.link}')">Удалить</button><button onclick="downloadFile('${f.name}')">Скачать</button></td>
                 </tr>
             `).join('');
         }
 
         async function loadMinioFiles() {
-            const res = await fetch('/filesMinio');
+            const res = await fetch('/server/filesMinio');
             const files = await res.json();
             const list = document.getElementById('minioFilesList');
             list.innerHTML = files.map(f => `
@@ -175,13 +171,13 @@
 
         async function deleteFile(name) {
             if (!confirm('Удалить?')) return;
-            await fetch(`/delete?file=${encodeURIComponent(name)}`, { method: 'DELETE' });
+            await fetch(`/server/delete?file=${encodeURIComponent(name)}`, { method: 'DELETE' });
             loadDbFiles();
             loadMinioFiles();
         }
 
         async function downloadFile(name) {
-            const res = await fetch(`/downloadUrl?file=${encodeURIComponent(name)}`);
+            const res = await fetch(`/server/downloadUrl?file=${encodeURIComponent(name)}`);
             const { url } = await res.json();
             window.open(url, '_blank');
         }
