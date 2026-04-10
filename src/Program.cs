@@ -7,7 +7,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddMinio(options => {
     options.WithEndpoint(Environment.GetEnvironmentVariable("MINIO_HOST") + ":" + Environment.GetEnvironmentVariable("MINIO_PORT"));
     options.WithCredentials(Environment.GetEnvironmentVariable("MINIO_USER"), Environment.GetEnvironmentVariable("MINIO_PASSWORD"));
-    options.WithCredentials(Environment.GetEnvironmentVariable("ACCESS_KEY"), Environment.GetEnvironmentVariable("SECRET_KEY"));
+    //options.WithCredentials(Environment.GetEnvironmentVariable("ACCESS_KEY"), Environment.GetEnvironmentVariable("SECRET_KEY"));
     options.WithSSL(false);
 });
 
@@ -23,20 +23,8 @@ app.MapGet("/meta-data", async (DbService db) => {
 });
 
 // POST /uploadUrl
-// app.MapPost("/uploadUrl", async (UploadRequest req, MinioService storage, DbService db) => {
-//     string uploadUrl = await storage.GetUploadUrlAsync(req.FileName);
-//     var categoryIds = req.Tags?.Select(t => t.CatId).ToList() ?? new List<int>();
-//     await db.SaveFileMetadataAsync(req.FileName, req.FileName, categoryIds);
-//     return Results.Ok(new { uploadUrl });
-// });
-
-// POST /uploadUrl
 app.MapPost("/uploadUrl", async (UploadRequest req, MinioService storage, DbService db) => {
-    string internalUrl = await storage.GetUploadUrlAsync(req.FileName);
-    
-    var uri = new Uri(internalUrl);
-    string uploadUrl = $"/minio-api{uri.PathAndQuery}";
-
+    string uploadUrl = await storage.GetUploadUrlAsync(req.FileName);
     var categoryIds = req.Tags?.Select(t => t.CatId).ToList() ?? new List<int>();
     await db.SaveFileMetadataAsync(req.FileName, req.FileName, categoryIds);
     return Results.Ok(new { uploadUrl });
@@ -68,15 +56,8 @@ app.MapGet("/filesMinio", async (MinioService storage) =>
 });
 
 // GET /downloadUrl
-// app.MapGet("/downloadUrl", async (string file, MinioService storage) => {
-//     string url = await storage.GetDownloadUrlAsync(file);
-//     return Results.Ok(new { url });
-// });
-
 app.MapGet("/downloadUrl", async (string file, MinioService storage) => {
-    string internalUrl = await storage.GetDownloadUrlAsync(file);
-    var uri = new Uri(internalUrl);
-    string url = $"/minio-api{uri.PathAndQuery}";
+    string url = await storage.GetDownloadUrlAsync(file);
     return Results.Ok(new { url });
 });
 
