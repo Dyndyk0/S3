@@ -129,7 +129,7 @@
                 if (!minioRes.ok) {
                     const errorText = await minioRes.text();
                     console.error("MinIO Error:", errorText);
-                    throw new Error('MinIO отклонил файл (возможно, CORS)');
+                    throw new Error('MinIO отклонил файл');
                 }
 
                 alert('Успешно загружено!');
