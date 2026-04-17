@@ -10,7 +10,7 @@ string minioEndpoint = Environment.GetEnvironmentVariable("MINIO_HOST") + ":" + 
 builder.Services.AddMinio(options => {
     options.WithEndpoint(minioEndpoint);
     options.WithCredentials(Environment.GetEnvironmentVariable("MINIO_USER"), Environment.GetEnvironmentVariable("MINIO_PASSWORD"));
-    options.WithCredentials(Environment.GetEnvironmentVariable("ACCESS_KEY"), Environment.GetEnvironmentVariable("SECRET_KEY"));
+    //options.WithCredentials(Environment.GetEnvironmentVariable("ACCESS_KEY"), Environment.GetEnvironmentVariable("SECRET_KEY"));
     options.WithSSL(false);
 });
 
@@ -89,7 +89,7 @@ app.MapGet("/download", async (int fileId, MinioService storage, DbService db, H
 
     context.Response.Headers["X-Accel-Redirect"] = $"/internal-minio{internalPathAndQuery}";
     context.Response.Headers["Content-Disposition"] = contentDisposition;
-    context.Response.Headers["X-File-Name"] = encodedFileLink.Replace("%", "%25");
+    context.Response.Headers["X-File-Name"] = encodedFileLink; //.Replace("%", "%25")
     context.Response.Headers["X-User-Id"] = currentUserId;
 
     return Results.Empty;

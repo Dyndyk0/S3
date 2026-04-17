@@ -177,9 +177,7 @@
         }
 
         async function downloadFile(id) {
-            const res = await fetch(`/download?fileId=${encodeURIComponent(id)}`);
-            const { url } = await res.json();
-            window.open(url, '_blank');
+            window.location.href = `/download?fileId=${encodeURIComponent(id)}`;
         }
 
         loadMetadata();

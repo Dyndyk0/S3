@@ -2,6 +2,8 @@ vs/
 bin/
 obj/
 Properties/
+nginx.conf.template/
+nginx_logs/
 .env
 .git/
 XPEHb.sln
