@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>XPEHb Cloud Manager</title>
+    <title>XPEHb</title>
     <style>
         body { font-family: sans-serif; margin: 20px; line-height: 1.5; }
         fieldset { margin-bottom: 20px; padding: 15px; }
@@ -14,15 +14,15 @@
     </style>
 </head>
 <body>
-    <h1>XPEHb Cloud Manager</h1>
+    <h1>XPEHb</h1>
 
     <fieldset>
         <legend>1. Настройка метаданных</legend>
-        <input type="text" id="newTypeName" placeholder="Новый тип (Отдел)">
+        <input type="text" id="newTypeName" placeholder="Новый тип">
         <button onclick="createType()">Добавить тип</button>
         <br><br>
         <select id="typeSelectForCat"></select>
-        <input type="text" id="newCatName" placeholder="Новая категория (IT)">
+        <input type="text" id="newCatName" placeholder="Новая категория">
         <button onclick="createCategory()">Добавить категорию</button>
     </fieldset>
 
@@ -42,6 +42,7 @@
             <table id="dbFilesTable">
                 <thead>
                     <tr>
+                        <th>id</th>
                         <th>Имя</th>
                         <th>Теги</th>
                         <th>Действие</th>
@@ -114,12 +115,11 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         FileName: file.name,
-                        Tags: checkedIds.map(id => ({ CatId: id, TypeId: 0 }))
+                        CategoryIds: checkedIds
                     })
                 });
-
                 if (!response.ok) throw new Error('Ошибка сервера при получении URL');
-                const { uploadUrl } = await response.json();
+                const uploadUrl  = await response.json();
 
                 const minioRes = await fetch(uploadUrl, {
                     method: 'PUT',
@@ -150,9 +150,10 @@
             const tbody = document.querySelector('#dbFilesTable tbody');
             tbody.innerHTML = files.map(f => `
                 <tr>
+                    <td>${f.id}</td>
                     <td>${f.name}</td>
                     <td>${(f.tags || []).map(t => `[${t.type}] ${t.cat}`).join(', ')}</td>
-                    <td><button onclick="deleteFile('${f.link}')">Удалить</button><button onclick="downloadFile('${f.name}')">Скачать</button></td>
+                    <td><button onclick="deleteFile('${f.id}')">Удалить</button><button onclick="downloadFile('${f.id}')">Скачать</button></td>
                 </tr>
             `).join('');
         }
@@ -164,20 +165,19 @@
             list.innerHTML = files.map(f => `
                 <li>
                     ${f.key} (${(f.size/1024).toFixed(1)} KB) 
-                    <button onclick="downloadFile('${f.key}')">Скачать</button>
                 </li>
             `).join('');
         }
 
-        async function deleteFile(name) {
+        async function deleteFile(id) {
             if (!confirm('Удалить?')) return;
-            await fetch(`/delete?file=${encodeURIComponent(name)}`, { method: 'DELETE' });
+            await fetch(`/delete?fileId=${encodeURIComponent(id)}`, { method: 'DELETE' });
             loadDbFiles();
             loadMinioFiles();
         }
 
-        async function downloadFile(name) {
-            const res = await fetch(`/downloadUrl?file=${encodeURIComponent(name)}`);
+        async function downloadFile(id) {
+            const res = await fetch(`/download?fileId=${encodeURIComponent(id)}`);
             const { url } = await res.json();
             window.open(url, '_blank');
         }

@@ -34,23 +34,23 @@ services:
       - .env
     environment:
       - NPGSQL_DISABLE_GSSAPI=true
+    # ports:
+    #   - 8080:8080
+  reverse-proxy:
+    image: nginx
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
     ports:
-      - 8080:8080
-  # reverse-proxy:
-  #   image: nginx
-  #   volumes:
-  #     - ./nginx/nginx.conf:/etc/nginx/nginx.conf
-  #   ports:
-  #     - mode: host
-  #       protocol: tcp
-  #       published: 8080
-  #       target: 8080
-  #   depends_on:
-  #     - server
-  #   networks:
-  #     - minio-local
-  #   env_file: 
-  #     - .env
+      - mode: host
+        protocol: tcp
+        published: 8080
+        target: 8080
+    depends_on:
+      - server
+    networks:
+      - minio-local
+    env_file: 
+      - .env
 
 
 networks:

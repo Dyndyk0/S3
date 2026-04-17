@@ -12,11 +12,10 @@ public class DbService
 
     public DbService(IConfiguration config)
     {
-        _connectionString = config.GetValue<string>("HOST_STRING") 
-            ?? Environment.GetEnvironmentVariable("HOST_STRING")!;
+        _connectionString = config.GetValue<string>("HOST_STRING") ?? Environment.GetEnvironmentVariable("HOST_STRING")!;
     }
 
-    private IDbConnection CreateConnection() => new NpgsqlConnection(_connectionString);
+    private NpgsqlConnection CreateConnection() => new NpgsqlConnection(_connectionString);
 
     public async Task<(IEnumerable<TypeMetadata> types, IEnumerable<CategoryMetadata> cats)> GetMetadataAsync()
     {
@@ -37,8 +36,8 @@ public class DbService
                    )) as TagsRaw
             FROM File f
             LEFT JOIN Metadata m ON f.id = m.file_id
-            LEFT JOIN TypeMetadata t ON m.typeMetadata_id = t.id
             LEFT JOIN CategoryMetadata c ON m.categoryMetadata_id = c.id
+            LEFT JOIN TypeMetadata t ON c.typeMetadata_id = t.id
             GROUP BY f.id, f.name, f.link";
 
         var result = await db.QueryAsync<FileViewDto>(sql);
@@ -53,32 +52,42 @@ public class DbService
         }
         return result;
     }
+    
+    public async Task<string?> GetLinkByIdAsync(int fileId) {
+        using var db = CreateConnection();
+        var files = await db.QueryAsync<FileEntity>("SELECT link FROM File WHERE id = @fileId", new { fileId });
+        FileEntity? file = files.FirstOrDefault();
+        return files.FirstOrDefault()?.Link;
+    }
 
-    public async Task SaveFileMetadataAsync(string fileName, string storagePath, List<int> categoryIds)
+    public async Task<string> InitFileMetadataAsync(string fileName, List<int> categoryIds)
     {
         categoryIds ??= new List<int>();
-        using var db = CreateConnection();
+        using IDbConnection db = CreateConnection();
         db.Open();
-        using var trans = db.BeginTransaction();
+        using IDbTransaction trans = db.BeginTransaction();
         try
         {
-            // 1. Создаем запись в File
             var fileId = await db.QuerySingleAsync<int>(
-                "INSERT INTO File (name, link, is_deleted) VALUES (@name, @link, @is_deleted) RETURNING id",
-                new { name = fileName, link = storagePath, is_deleted = false}, transaction: trans);
+                @"INSERT INTO File (name, link, last_updated, is_uploaded, is_deleted) 
+                VALUES (@name, 'temp_link', NOW(), false, false) RETURNING id",
+                new { name = fileName }, transaction: trans);
 
-            // 2. Создаем связи в Metadata для каждой категории
+            string link = $"{fileId}_{fileName}";
+
+            await db.ExecuteAsync(
+                "UPDATE File SET link = @link WHERE id = @id",
+                new { link, id = fileId }, transaction: trans);
+
             foreach (var catId in categoryIds)
             {
-                // Сначала узнаем TypeId для этой категории
-                var typeId = await db.QuerySingleAsync<int>(
-                    "SELECT typeMetadata_id FROM CategoryMetadata WHERE id = @catId", new { catId }, transaction: trans);
-
                 await db.ExecuteAsync(
-                    "INSERT INTO Metadata (file_id, typeMetadata_id, categoryMetadata_id) VALUES (@fileId, @typeId, @catId)",
-                    new { fileId, typeId, catId }, transaction: trans);
+                    "INSERT INTO Metadata (file_id, categoryMetadata_id) VALUES (@fileId, @catId)",
+                    new { fileId, catId }, transaction: trans);
             }
             trans.Commit();
+            
+            return link;
         }
         catch (Exception ex)
         {
@@ -88,10 +97,17 @@ public class DbService
         }
     }
 
+    public async Task ConfirmUploadByLinkAsync(string link)
+    {
+        using IDbConnection db = CreateConnection();
+        await db.ExecuteAsync(
+            "UPDATE File SET is_uploaded = true, last_updated = NOW() WHERE link = @link",
+            new { link });
+    }
+
     public async Task DeleteFileAsync(string filename)
     {
         using var db = CreateConnection();
-        // Удаляем сначала из Metadata (из-за FK), потом из File
         await db.ExecuteAsync("DELETE FROM Metadata WHERE file_id IN (SELECT id FROM File WHERE link = @filename)", new { filename });
         await db.ExecuteAsync("DELETE FROM File WHERE link = @filename", new { filename });
     }
