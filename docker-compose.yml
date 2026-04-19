@@ -39,7 +39,9 @@ services:
   reverse-proxy:
     image: nginx
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/nginx.conf.template:/etc/nginx/templates/nginx.conf.template
+      - ./nginx_logs:/var/log/nginx
+      #- ./nginx/nginx.conf:/etc/nginx/nginx.conf
     ports:
       - mode: host
         protocol: tcp
@@ -51,6 +53,10 @@ services:
       - minio-local
     env_file: 
       - .env
+    environment:
+      - NGINX_ENVSUBST_OUTPUT_DIR=/etc/nginx
+      - MINIO_HOST
+      - MINIO_PORT
 
 
 networks:

@@ -2,10 +2,13 @@ using XPEHb.Services;
 using XPEHb.Models;
 using System.Net;
 using Minio;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
 string minioEndpoint = Environment.GetEnvironmentVariable("MINIO_HOST") + ":" + Environment.GetEnvironmentVariable("MINIO_PORT");
+
+builder.Services.AddDbContext<MyDbContext>(options => options.UseNpgsql(Environment.GetEnvironmentVariable("HOST_STRING")));
 
 builder.Services.AddMinio(options => {
     options.WithEndpoint(minioEndpoint);
@@ -19,19 +22,40 @@ builder.Services.AddScoped<DbService>();
 
 var app = builder.Build();
 
+// Глобальный перехватчик (для логов) (возможно, в будущем перенести в отдельный файл)
+app.Use(async (context, next) =>
+{
+    context.Response.OnStarting(() =>
+    {
+        string currentUserId = "Zaglushka"; // Заглушка
+        context.Response.Headers["X-User-Id"] = currentUserId;
+
+        if (context.Items.TryGetValue("LogFileName", out var fileNameObj) && fileNameObj is string fileName)
+        {
+            context.Response.Headers["X-File-Name"] = Uri.EscapeDataString(fileName);
+        }
+
+        return Task.CompletedTask;
+    });
+
+    await next(context);
+});
+
 // GET /meta-data
 app.MapGet("/meta-data", async (DbService db) => {
     var (types, cats) = await db.GetMetadataAsync();
     return Results.Ok(new { types, cats });
 });
 
-// POST /uploadUrl (Шаг "Имя файла и теги" + возврат ссылки)
+// POST /uploadUrl
 app.MapPost("/uploadUrl", async (FileNameWithTags req, MinioService storage, DbService db, HttpContext context) => {
     string link = await db.InitFileMetadataAsync(req.FileName, req.CategoryIds);
+
+    context.Items["LogFileName"] = link; 
+
     string minioPutUrl = await storage.GetUploadUrlAsync(link);
-    
-    string publicHost = $"{context.Request.Scheme}://{context.Request.Host}:8080"; // Тут порт 8080 потому, что потому (удалить позднее)
-    string maskedUrl = minioPutUrl.Replace($"http://{minioEndpoint}", $"{Environment.GetEnvironmentVariable("SERVER_URL")}/minio");
+    string publicHost = $"{context.Request.Scheme}://{context.Request.Host}:8080"; // Тут порт 8080 потому, что потому (удалить позднее) (Вспомнить зачем вообще эта строчка)
+    string maskedUrl = minioPutUrl.Replace($"http://{minioEndpoint}", "/minio");
     return Results.Ok(maskedUrl);
 });
 
@@ -73,31 +97,33 @@ app.MapPost("/categories", async (int typeId, string name, DbService db) => {
 // GET /download
 app.MapGet("/download", async (int fileId, MinioService storage, DbService db, HttpContext context) => 
 {
-    // Проверка пользователя
-    string currentUserId = "user_123"; 
-
     string? fileLink = await db.GetLinkByIdAsync(fileId);
     if (fileLink is null) return Results.NotFound($"The file with ID {fileId} was not found");
+
+    context.Items["LogFileName"] = fileLink; //.Replace("%", "%25") ладно
 
     string fullMinioUrl = await storage.GetDownloadUrlAsync(fileLink);
     var uri = new Uri(fullMinioUrl);
 
-    string internalPathAndQuery = uri.PathAndQuery;
-
     var encodedFileLink = Uri.EscapeDataString(fileLink);
     var contentDisposition = $"attachment; filename=\"{encodedFileLink}\"; filename*=UTF-8''{encodedFileLink}";
 
-    context.Response.Headers["X-Accel-Redirect"] = $"/internal-minio{internalPathAndQuery}";
+    context.Response.Headers["X-Accel-Redirect"] = $"/internal-minio{uri.PathAndQuery}";
     context.Response.Headers["Content-Disposition"] = contentDisposition;
-    context.Response.Headers["X-File-Name"] = encodedFileLink; //.Replace("%", "%25")
-    context.Response.Headers["X-User-Id"] = currentUserId;
 
     return Results.Empty;
 });
 
+// POST /files (переделать в get, желательно так, чтобы не появлялось бесконечность кода)
+app.MapPost("/files/search", async (FileFilterRequest filter, DbService db) => {
+    var files = await db.GetFilesAsync(filter);
+    return Results.Ok(files);
+});
+
 // GET /files
 app.MapGet("/files", async (DbService db) => {
-    var files = await db.GetFilesAsync();
+    var defaultFilter = new FileFilterRequest { Offset = 0, Limit = 100 };
+    var files = await db.GetFilesAsync(defaultFilter);
     return Results.Ok(files);
 });
 
@@ -109,9 +135,12 @@ app.MapGet("/filesMinio", async (MinioService storage) =>
 });
 
 // DELETE /delete
-app.MapDelete("/delete", async (int fileId, MinioService storage, DbService db) => {
+app.MapDelete("/delete", async (int fileId, MinioService storage, DbService db, HttpContext context) => {
     string? fileLink = await db.GetLinkByIdAsync(fileId);
     if (fileLink is null) return Results.NotFound($"The file with ID {fileId} was not found");
+
+    context.Items["LogFileName"] = fileLink;
+
     await storage.RemoveFileAsync(fileLink);
     await db.DeleteFileAsync(fileLink);
     return Results.Ok("Удалено");

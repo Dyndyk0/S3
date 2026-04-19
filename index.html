@@ -2,19 +2,24 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>XPEHb</title>
+    <title>XPEHb (EF Core Web Test)</title>
     <style>
-        body { font-family: sans-serif; margin: 20px; line-height: 1.5; }
-        fieldset { margin-bottom: 20px; padding: 15px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        body { font-family: sans-serif; margin: 20px; line-height: 1.5; background-color: #f9f9f9; }
+        fieldset { margin-bottom: 20px; padding: 15px; background: white; border: 1px solid #ccc; border-radius: 5px; }
+        legend { font-weight: bold; background: #eee; padding: 2px 8px; border: 1px solid #ccc; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; }
         th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-        th { background: #f4f4f4; }
-        .flex { display: flex; gap: 20px; }
-        .column { flex: 1; min-width: 300px; }
+        th { background: #e0e0e0; }
+        .flex { display: flex; gap: 20px; flex-wrap: wrap; }
+        .column { flex: 1; min-width: 400px; background: white; padding: 15px; border: 1px solid #ccc; border-radius: 5px; }
+        .filter-row { display: flex; gap: 15px; margin-bottom: 10px; align-items: center; }
+        .filter-row input, .filter-row select { padding: 5px; }
+        .tag-badge { display: inline-block; background: #007bff; color: white; padding: 3px 8px; border-radius: 12px; font-size: 12px; margin: 2px; }
+        .tag-badge button { background: none; border: none; color: white; cursor: pointer; font-weight: bold; margin-left: 5px; }
     </style>
 </head>
 <body>
-    <h1>XPEHb</h1>
+    <h1>XPEHb - Тестовый интерфейс</h1>
 
     <fieldset>
         <legend>1. Настройка метаданных</legend>
@@ -32,18 +37,48 @@
         <div id="tagSelectors" style="margin: 10px 0; border: 1px solid #eee; padding: 10px; max-height: 150px; overflow-y: auto;">
             Загрузка категорий...
         </div>
-        <button onclick="uploadFile()" id="uploadBtn">Загрузить в Облако и БД</button>
+        <button onclick="uploadFile()" id="uploadBtn" style="padding: 10px; background: #28a745; color: white; border: none; cursor: pointer;">
+            Загрузить в Облако и БД
+        </button>
+    </fieldset>
+
+    <fieldset style="border-color: #007bff;">
+        <legend>3. Поиск и Фильтрация (EF Core)</legend>
+        
+        <div class="filter-row">
+            <label>Пагинация:</label>
+            <input type="number" id="searchOffset" value="0" min="0" style="width: 70px;" title="С какой записи начать (Offset)">
+            <input type="number" id="searchLimit" value="100" min="1" style="width: 70px;" title="Сколько записей взять (Limit)">
+            
+            <label style="margin-left: 20px;">Даты (UTC):</label>
+            <input type="datetime-local" id="searchDateFrom" title="От">
+            <input type="datetime-local" id="searchDateTo" title="До">
+        </div>
+
+        <div class="filter-row" style="background: #f1f8ff; padding: 10px; border-radius: 5px;">
+            <label>Добавить фильтр по тегу (Условие И):</label>
+            <select id="searchTagType"></select>
+            <input type="text" id="searchTagCat" placeholder="Часть имени категории (напр. 'отчет')">
+            <button onclick="addSearchTag()">Добавить</button>
+        </div>
+        <div id="activeSearchTags" style="margin-bottom: 10px;"></div>
+
+        <button onclick="searchFiles()" style="padding: 8px 15px; background: #007bff; color: white; border: none; cursor: pointer; font-size: 16px;">
+            Применить фильтры и найти
+        </button>
     </fieldset>
 
     <div class="flex">
         <div class="column">
-            <h2>Файлы в БД (SQL)</h2>
-            <button onclick="loadDbFiles()">Обновить</button>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h2 style="margin: 0;">Файлы в БД</h2>
+            </div>
             <table id="dbFilesTable">
                 <thead>
                     <tr>
                         <th>id</th>
                         <th>Имя</th>
+                        <th>Дата (UTC)</th>
                         <th>Теги</th>
                         <th>Действие</th>
                     </tr>
@@ -52,26 +87,29 @@
             </table>
         </div>
 
-        <div class="column">
+        <div class="column" style="min-width: 300px;">
             <h2>Все файлы в MinIO</h2>
-            <button onclick="loadMinioFiles()">Обновить</button>
+            <button onclick="loadMinioFiles()">Обновить MinIO</button>
             <ul id="minioFilesList"></ul>
         </div>
     </div>
 
     <script>
         let allMetadata = { types: [], cats: [] };
+        let activeSearchTags =[]; // Массив для хранения выбранных тегов для поиска
 
+        // === ИНИЦИАЛИЗАЦИЯ МЕТАДАННЫХ ===
         async function loadMetadata() {
             try {
                 const res = await fetch('/meta-data');
                 allMetadata = await res.json();
                 
-                document.getElementById('typeSelectForCat').innerHTML = 
-                    allMetadata.types.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+                const typeOptions = allMetadata.types.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+                document.getElementById('typeSelectForCat').innerHTML = typeOptions;
+                document.getElementById('searchTagType').innerHTML = typeOptions; // Для поиска
 
                 const tagContainer = document.getElementById('tagSelectors');
-                tagContainer.innerHTML = '<strong>Выберите категории:</strong><br>';
+                tagContainer.innerHTML = '<strong>Выберите категории при загрузке:</strong><br>';
                 allMetadata.cats.forEach(cat => {
                     const typeName = allMetadata.types.find(t => t.id === cat.typeMetadataId)?.name || '?';
                     tagContainer.innerHTML += `
@@ -83,6 +121,7 @@
             } catch (e) { console.error("Ошибка метаданных:", e); }
         }
 
+        // === СОЗДАНИЕ МЕТАДАННЫХ ===
         async function createType() {
             const name = document.getElementById('newTypeName').value;
             if(!name) return;
@@ -98,6 +137,7 @@
             loadMetadata();
         }
 
+        // === ЗАГРУЗКА ФАЙЛА ===
         async function uploadFile() {
             const fileInput = document.getElementById('fileInput');
             if (fileInput.files.length === 0) return alert('Выберите файл');
@@ -113,66 +153,128 @@
                 const response = await fetch('/uploadUrl', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        FileName: file.name,
-                        CategoryIds: checkedIds
-                    })
+                    body: JSON.stringify({ FileName: file.name, CategoryIds: checkedIds })
                 });
                 if (!response.ok) throw new Error('Ошибка сервера при получении URL');
                 const uploadUrl  = await response.json();
 
-                const minioRes = await fetch(uploadUrl, {
-                    method: 'PUT',
-                    body: file
-                });
+                const minioRes = await fetch(uploadUrl, { method: 'PUT', body: file });
 
-                if (!minioRes.ok) {
-                    const errorText = await minioRes.text();
-                    console.error("MinIO Error:", errorText);
-                    throw new Error('MinIO отклонил файл');
-                }
+                if (!minioRes.ok) throw new Error('MinIO отклонил файл');
 
                 alert('Успешно загружено!');
-                loadDbFiles();
+                searchFiles(); // Обновляем список файлов
                 loadMinioFiles();
             } catch (e) {
                 console.error(e);
-                alert('Ошибка: ' + e.message + '. Подробности в консоли (F12).');
+                alert('Ошибка: ' + e.message);
             } finally {
                 btn.disabled = false;
                 btn.innerText = 'Загрузить в Облако и БД';
             }
         }
 
-        async function loadDbFiles() {
-            const res = await fetch('/files');
-            const files = await res.json();
-            const tbody = document.querySelector('#dbFilesTable tbody');
-            tbody.innerHTML = files.map(f => `
-                <tr>
-                    <td>${f.id}</td>
-                    <td>${f.name}</td>
-                    <td>${(f.tags || []).map(t => `[${t.type}] ${t.cat}`).join(', ')}</td>
-                    <td><button onclick="deleteFile('${f.id}')">Удалить</button><button onclick="downloadFile('${f.id}')">Скачать</button></td>
-                </tr>
+        // === УПРАВЛЕНИЕ ФИЛЬТРАМИ ===
+        function addSearchTag() {
+            const select = document.getElementById('searchTagType');
+            const typeId = parseInt(select.value);
+            const typeName = select.options[select.selectedIndex].text;
+            const category = document.getElementById('searchTagCat').value.trim();
+
+            if (!category) {
+                alert("Введите часть названия категории для поиска");
+                return;
+            }
+
+            activeSearchTags.push({ typeId, typeName, category });
+            document.getElementById('searchTagCat').value = ''; // Очищаем поле
+            renderSearchTags();
+        }
+
+        function removeSearchTag(index) {
+            activeSearchTags.splice(index, 1);
+            renderSearchTags();
+        }
+
+        function renderSearchTags() {
+            const container = document.getElementById('activeSearchTags');
+            if (activeSearchTags.length === 0) {
+                container.innerHTML = '<span style="color:#888; font-size:12px;">Теги не выбраны (поиск по всем)</span>';
+                return;
+            }
+
+            container.innerHTML = activeSearchTags.map((t, index) => `
+                <div class="tag-badge">
+                    [${t.typeName}] содержит "${t.category}"
+                    <button onclick="removeSearchTag(${index})">×</button>
+                </div>
             `).join('');
         }
 
+        // === ПОИСК И ОТОБРАЖЕНИЕ ФАЙЛОВ ===
+        async function searchFiles() {
+            const offset = parseInt(document.getElementById('searchOffset').value) || 0;
+            const limit = parseInt(document.getElementById('searchLimit').value) || 100;
+            const dateFromRaw = document.getElementById('searchDateFrom').value;
+            const dateToRaw = document.getElementById('searchDateTo').value;
+
+            // Собираем Payload для POST /files/search
+            const payload = {
+                offset: offset,
+                limit: limit,
+                tags: activeSearchTags.map(t => ({ typeId: t.typeId, category: t.category }))
+            };
+
+            // Если даты выбраны, переводим их в ISO формат (UTC)
+            if (dateFromRaw) payload.dateFrom = new Date(dateFromRaw).toISOString();
+            if (dateToRaw) payload.dateTo = new Date(dateToRaw).toISOString();
+
+            try {
+                const res = await fetch('/files/search', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                const files = await res.json();
+                renderDbTable(files);
+            } catch (e) {
+                console.error("Ошибка поиска", e);
+            }
+        }
+
+        function renderDbTable(files) {
+            const tbody = document.querySelector('#dbFilesTable tbody');
+            tbody.innerHTML = files.map(f => {
+                const dateStr = f.lastUpdated ? new Date(f.lastUpdated).toLocaleString() : '—';
+                const tagsHtml = (f.tags || []).map(t => `<span class="tag-badge" style="background:#6c757d;">[${t.type}] ${t.cat}</span>`).join(' ');
+                
+                return `
+                <tr>
+                    <td>${f.id}</td>
+                    <td>${f.name}</td>
+                    <td>${dateStr}</td>
+                    <td>${tagsHtml}</td>
+                    <td>
+                        <button onclick="downloadFile('${f.id}')">Скачать</button>
+                        <button onclick="deleteFile('${f.id}')" style="color:red;">Удалить</button>
+                    </td>
+                </tr>
+            `}).join('');
+        }
+
+        // === MINIO И УДАЛЕНИЕ ===
         async function loadMinioFiles() {
             const res = await fetch('/filesMinio');
             const files = await res.json();
             const list = document.getElementById('minioFilesList');
-            list.innerHTML = files.map(f => `
-                <li>
-                    ${f.key} (${(f.size/1024).toFixed(1)} KB) 
-                </li>
-            `).join('');
+            list.innerHTML = files.map(f => `<li>${f.key} (${(f.size/1024).toFixed(1)} KB)</li>`).join('');
         }
 
         async function deleteFile(id) {
-            if (!confirm('Удалить?')) return;
+            if (!confirm('Точно удалить?')) return;
             await fetch(`/delete?fileId=${encodeURIComponent(id)}`, { method: 'DELETE' });
-            loadDbFiles();
+            searchFiles();
             loadMinioFiles();
         }
 
@@ -180,9 +282,12 @@
             window.location.href = `/download?fileId=${encodeURIComponent(id)}`;
         }
 
-        loadMetadata();
-        loadDbFiles();
-        loadMinioFiles();
+        // Запуск при загрузке страницы
+        loadMetadata().then(() => {
+            renderSearchTags();
+            searchFiles(); 
+            loadMinioFiles();
+        });
     </script>
 </body>
 </html>

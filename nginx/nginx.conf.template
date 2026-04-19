@@ -22,8 +22,8 @@ http {
                          'Status: $status '
                          'Bytes: $body_bytes_sent '
                          'Time: $request_time s '
-                         'User: "$upstream_http_x_user_id" '
-                         'File: "$upstream_http_x_file_name"';
+                         'User: "$sent_http_x_user_id" '
+                         'File: "$sent_http_x_file_name"';
 
     server {
         listen 8080;
@@ -39,7 +39,7 @@ http {
         proxy_redirect off;
 
         set $backend http://server:8080;
-        set $minio_host 192.168.1.8:9000;
+        set $minio_host ${MINIO_HOST}:${MINIO_PORT};
         set $minio_url http://$minio_host;
 
         location / {

@@ -1,124 +1,135 @@
-using Dapper;
-using Npgsql;
-using System.Data;
+using Microsoft.EntityFrameworkCore;
 using XPEHb.Models;
-using System.Text.Json;
 
 namespace XPEHb.Services;
 
 public class DbService
 {
-    private readonly string _connectionString;
+    private readonly MyDbContext _db;
 
-    public DbService(IConfiguration config)
+    public DbService(MyDbContext db)
     {
-        _connectionString = config.GetValue<string>("HOST_STRING") ?? Environment.GetEnvironmentVariable("HOST_STRING")!;
+        _db = db;
     }
-
-    private NpgsqlConnection CreateConnection() => new NpgsqlConnection(_connectionString);
 
     public async Task<(IEnumerable<TypeMetadata> types, IEnumerable<CategoryMetadata> cats)> GetMetadataAsync()
     {
-        using var db = CreateConnection();
-        var types = await db.QueryAsync<TypeMetadata>("SELECT id, name FROM TypeMetadata");
-        var cats = await db.QueryAsync<CategoryMetadata>("SELECT id, name, typeMetadata_id as TypeMetadataId FROM CategoryMetadata");
+        var types = await _db.Types.ToListAsync();
+        var cats = await _db.Categories.ToListAsync();
         return (types, cats);
     }
 
-    public async Task<IEnumerable<FileViewDto>> GetFilesAsync()
+    public async Task<IEnumerable<FileViewDto>> GetFilesAsync(FileFilterRequest filter)
     {
-        using var db = CreateConnection();
-        string sql = @"
-            SELECT f.id, f.name, f.link,
-                   json_agg(json_build_object(
-                        'TypeId', t.id, 'Type', t.name, 
-                        'CatId', c.id, 'Cat', c.name
-                   )) as TagsRaw
-            FROM File f
-            LEFT JOIN Metadata m ON f.id = m.file_id
-            LEFT JOIN CategoryMetadata c ON m.categoryMetadata_id = c.id
-            LEFT JOIN TypeMetadata t ON c.typeMetadata_id = t.id
-            GROUP BY f.id, f.name, f.link";
+        var query = _db.Files
+            .Include(f => f.Metadatas)
+                .ThenInclude(m => m.Category)
+                .ThenInclude(c => c.Type)
+            //.Where(f => !f.IsDeleted && f.IsUploaded) // Только загруженные и не удаленные
+            .AsQueryable();
 
-        var result = await db.QueryAsync<FileViewDto>(sql);
-        
-        foreach (var file in result)
+        if (filter.DateFrom.HasValue)
+            query = query.Where(f => f.LastUpdated >= filter.DateFrom.Value);
+        if (filter.DateTo.HasValue)
+            query = query.Where(f => f.LastUpdated <= filter.DateTo.Value);
+
+        if (filter.Tags != null && filter.Tags.Any())
         {
-            if (!string.IsNullOrEmpty(file.TagsRaw) && file.TagsRaw != "[{\"TypeId\" : null, \"Type\" : null, \"CatId\" : null, \"Cat\" : null}]")
+            foreach (var tag in filter.Tags)
             {
-                file.Tags = JsonSerializer.Deserialize<List<TagDto>>(file.TagsRaw, 
-                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new();
+                query = query.Where(f => f.Metadatas.Any(m => 
+                    m.Category.TypeMetadataId == tag.TypeId &&
+                    EF.Functions.ILike(m.Category.Name, $"%{tag.Category}%")
+                ));
             }
         }
-        return result;
+
+        var result = await query
+            .OrderByDescending(f => f.LastUpdated)
+            .Skip(filter.Offset)
+            .Take(filter.Limit)
+            .ToListAsync();
+
+        return result.Select(f => new FileViewDto
+        {
+            Id = f.Id,
+            Name = f.Name,
+            Link = f.Link,
+            LastUpdated = f.LastUpdated,
+            Tags = f.Metadatas.Select(m => new TagDto(
+                m.Category.TypeMetadataId, 
+                m.Category.Type.Name, 
+                m.Category.Id, 
+                m.Category.Name
+            )).ToList()
+        });
     }
-    
-    public async Task<string?> GetLinkByIdAsync(int fileId) {
-        using var db = CreateConnection();
-        var files = await db.QueryAsync<FileEntity>("SELECT link FROM File WHERE id = @fileId", new { fileId });
-        FileEntity? file = files.FirstOrDefault();
-        return files.FirstOrDefault()?.Link;
+
+    public async Task<string?> GetLinkByIdAsync(int fileId)
+    {
+        var file = await _db.Files.FirstOrDefaultAsync(f => f.Id == fileId);
+        return file?.Link;
     }
 
     public async Task<string> InitFileMetadataAsync(string fileName, List<int> categoryIds)
     {
-        categoryIds ??= new List<int>();
-        using IDbConnection db = CreateConnection();
-        db.Open();
-        using IDbTransaction trans = db.BeginTransaction();
-        try
+        var file = new FileEntity
         {
-            var fileId = await db.QuerySingleAsync<int>(
-                @"INSERT INTO File (name, link, last_updated, is_uploaded, is_deleted) 
-                VALUES (@name, 'temp_link', NOW(), false, false) RETURNING id",
-                new { name = fileName }, transaction: trans);
+            Name = fileName,
+            Link = "temp_link",
+            LastUpdated = DateTime.UtcNow,
+            IsUploaded = false,
+            IsDeleted = false
+        };
 
-            string link = $"{fileId}_{fileName}";
+        _db.Files.Add(file);
+        await _db.SaveChangesAsync();
 
-            await db.ExecuteAsync(
-                "UPDATE File SET link = @link WHERE id = @id",
-                new { link, id = fileId }, transaction: trans);
+        file.Link = $"{file.Id}_{fileName}";
 
+        if (categoryIds != null)
+        {
             foreach (var catId in categoryIds)
             {
-                await db.ExecuteAsync(
-                    "INSERT INTO Metadata (file_id, categoryMetadata_id) VALUES (@fileId, @catId)",
-                    new { fileId, catId }, transaction: trans);
+                _db.Metadatas.Add(new Metadata { FileId = file.Id, CategoryMetadataId = catId });
             }
-            trans.Commit();
-            
-            return link;
         }
-        catch (Exception ex)
-        {
-            trans.Rollback();
-            Console.WriteLine($"Database Error: {ex.Message}");
-            throw;
-        }
+
+        await _db.SaveChangesAsync();
+        return file.Link;
     }
 
     public async Task ConfirmUploadByLinkAsync(string link)
     {
-        using IDbConnection db = CreateConnection();
-        await db.ExecuteAsync(
-            "UPDATE File SET is_uploaded = true, last_updated = NOW() WHERE link = @link",
-            new { link });
+        var file = await _db.Files.FirstOrDefaultAsync(f => f.Link == link);
+        if (file != null)
+        {
+            file.IsUploaded = true;
+            file.LastUpdated = DateTime.UtcNow;
+            await _db.SaveChangesAsync();
+        }
     }
 
-    public async Task DeleteFileAsync(string filename)
+    public async Task DeleteFileAsync(string link)
     {
-        using var db = CreateConnection();
-        await db.ExecuteAsync("DELETE FROM Metadata WHERE file_id IN (SELECT id FROM File WHERE link = @filename)", new { filename });
-        await db.ExecuteAsync("DELETE FROM File WHERE link = @filename", new { filename });
+        var file = await _db.Files.Include(f => f.Metadatas).FirstOrDefaultAsync(f => f.Link == link);
+        if (file != null)
+        {
+            _db.Metadatas.RemoveRange(file.Metadatas);
+            _db.Files.Remove(file);
+            await _db.SaveChangesAsync();
+        }
     }
 
-    public async Task CreateTypeAsync(string name) {
-        using var db = CreateConnection();
-        await db.ExecuteAsync("INSERT INTO TypeMetadata (name) VALUES (@name)", new { name });
+    public async Task CreateTypeAsync(string name)
+    {
+        _db.Types.Add(new TypeMetadata { Name = name });
+        await _db.SaveChangesAsync();
     }
 
-    public async Task CreateCategoryAsync(int typeId, string name) {
-        using var db = CreateConnection();
-        await db.ExecuteAsync("INSERT INTO CategoryMetadata (typeMetadata_id, name) VALUES (@typeId, @name)", new { typeId, name });
+    public async Task CreateCategoryAsync(int typeId, string name)
+    {
+        _db.Categories.Add(new CategoryMetadata { TypeMetadataId = typeId, Name = name });
+        await _db.SaveChangesAsync();
     }
 }
