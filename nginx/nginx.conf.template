@@ -71,7 +71,6 @@ http {
         location ~* ^/internal-minio(.*) {
             internal;
             
-            # Убираем префикс /internal-minio и оставляем путь к бакету/файлу + параметры подписи
             rewrite ^/internal-minio(.*) $1 break;
 
             # Настройки соединения с MinIO

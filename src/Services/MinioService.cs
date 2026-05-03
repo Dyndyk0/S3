@@ -1,6 +1,6 @@
 using Minio;
 using Minio.DataModel.Args;
-using XPEHb.Models;
+using XPEHb.Models.Dtos;
 
 namespace XPEHb.Services;
 

@@ -3,8 +3,8 @@
   "WorkspaceRootPath": "C:\\ALEX\\Prodject\\doker\\XPEHb\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{6BB76979-0F78-ABA5-F103-EEF8867C61F4}|XPEHb.csproj|c:\\alex\\prodject\\doker\\xpehb\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{6BB76979-0F78-ABA5-F103-EEF8867C61F4}|XPEHb.csproj|solutionrelative:program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{6BB76979-0F78-ABA5-F103-EEF8867C61F4}|XPEHb.csproj|c:\\alex\\prodject\\doker\\xpehb\\src\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{6BB76979-0F78-ABA5-F103-EEF8867C61F4}|XPEHb.csproj|solutionrelative:src\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     }
   ],
   "DocumentGroupContainers": [
@@ -20,13 +20,13 @@
               "$type": "Document",
               "DocumentIndex": 0,
               "Title": "Program.cs",
-              "DocumentMoniker": "C:\\ALEX\\Prodject\\doker\\XPEHb\\Program.cs",
-              "RelativeDocumentMoniker": "Program.cs",
-              "ToolTip": "C:\\ALEX\\Prodject\\doker\\XPEHb\\Program.cs",
-              "RelativeToolTip": "Program.cs",
-              "ViewState": "AgIAABAAAAAAAAAAAAA1wCoAAAAIAAAAAAAAAA==",
+              "DocumentMoniker": "C:\\ALEX\\Prodject\\doker\\XPEHb\\src\\Program.cs",
+              "RelativeDocumentMoniker": "src\\Program.cs",
+              "ToolTip": "C:\\ALEX\\Prodject\\doker\\XPEHb\\src\\Program.cs",
+              "RelativeToolTip": "src\\Program.cs",
+              "ViewState": "AgIAAAYAAAAAAAAAAAAAABEAAAAbAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-04-02T09:26:25.102Z",
+              "WhenOpened": "2026-05-03T09:15:21.4Z",
               "EditorCaption": ""
             }
           ]
