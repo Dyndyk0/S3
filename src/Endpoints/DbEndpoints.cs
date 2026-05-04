@@ -10,8 +10,8 @@ public static class DbEndpoints
 
         // GET /meta-data
         app.MapGet("/meta-data", async (DbService db) => {
-            var (keys, values) = await db.GetMetadataAsync();
-            return Results.Ok(new { keys, values });
+            var metadata = await db.GetMetadataAsync();
+            return Results.Ok(metadata);
         });
 
         // POST /minio-webhook

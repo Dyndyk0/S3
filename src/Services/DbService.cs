@@ -12,12 +12,18 @@ public class DbService
         _db = db;
     }
 
-    public async Task<(IEnumerable<Keymetadatum> keys, IEnumerable<Valuemetadatum> values)> GetMetadataAsync()
-    {
-        var keys = await _db.Keymetadata.ToListAsync();
-        var values = await _db.Valuemetadata.ToListAsync();
-        return (keys, values);
-    }
+public async Task<IEnumerable<KeyMetadataDto>> GetMetadataAsync()
+{
+    var keys = await _db.Keymetadata
+        .Select(k => new KeyMetadataDto(
+            k.Id, 
+            k.Name,
+            k.Valuemetadata.Select(v => new ValueMetadataDto(v.Id, v.Name)).ToList()
+        ))
+        .ToListAsync();
+
+    return keys;
+}
 
     public async Task<IEnumerable<FileDto>> GetFilesAsync(FileFilterDto filter)
     {
@@ -38,10 +44,9 @@ public class DbService
         if (!string.IsNullOrWhiteSpace(filter.TagsJson))
         {
             try { tags = JsonSerializer.Deserialize<List<TagFilterDto>>(filter.TagsJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true }); }
-            catch { /* игнорируем некорректный JSON или логируем */ }
+            catch (Exception ex) { Console.WriteLine($"JSON TagFilterDto Error: {ex.Message}"); }
         }
 
-        // Применяем фильтр по тегам
         if (tags != null && tags.Any())
         {
             foreach (var tag in tags)
@@ -59,7 +64,7 @@ public class DbService
             .Take(filter.Limit)
             .ToListAsync();
 
-        return result.Select(f => new FileDto // Используем новое название
+        var dtos = result.Select(f => new FileDto
         {
             Id = f.Id,
             Name = f.Name,
@@ -67,11 +72,12 @@ public class DbService
             LastUpdated = f.LastUpdated,
             Tags = f.Metadata.Select(m => new TagDto(
                 m.Valuemetadata.KeymetadataId, 
-                m.Valuemetadata.Keymetadata.Name, 
+                m.Valuemetadata.Keymetadata?.Name, 
                 m.Valuemetadata.Id, 
                 m.Valuemetadata.Name
             )).ToList()
         });
+        return dtos;
     }
 
     public async Task<string?> GetLinkByIdAsync(int fileId)
@@ -80,13 +86,13 @@ public class DbService
         return file?.Link;
     }
 
-    public async Task<string> InitFileMetadataAsync(string fileName, List<int> valueMetadataIds)
+    public async Task<(int id, string link)> InitFileMetadataAsync(string fileName, List<int> valueMetadataIds)
     {
         var file = new src.Models.Entities.File
         {
             Name = fileName,
             Link = "temp_link",
-            LastUpdated = DateTime.UtcNow,
+            LastUpdated = DateTime.Now,
             IsUploaded = false,
             IsDeleted = false
         };
@@ -105,7 +111,7 @@ public class DbService
         }
 
         await _db.SaveChangesAsync();
-        return file.Link;
+        return (file.Id, file.Link);
     }
 
     public async Task ConfirmUploadByLinkAsync(string link)
@@ -140,5 +146,57 @@ public class DbService
     {
         _db.Valuemetadata.Add(new Valuemetadatum { KeymetadataId = KeymetadataId, Name = name });
         await _db.SaveChangesAsync();
+    }
+
+    // === Template Methods ===
+    public async Task<IEnumerable<TemplateDto>> GetAllTemplatesAsync()
+    {
+        var templates = await _db.Templates
+            .Select(t => new TemplateDto(t.Id, t.Name))
+            .ToListAsync();
+        return templates;
+    }
+
+    public async Task<TemplateDetailDto?> GetTemplateDetailAsync(int templateId)
+    {
+        var template = await _db.Templates
+            .Include(t => t.Metadatatemplates)
+                .ThenInclude(mt => mt.Keymetadata)
+                    .ThenInclude(k => k.Valuemetadata)
+            .FirstOrDefaultAsync(t => t.Id == templateId);
+
+        if (template == null)
+            return null;
+
+        var fields = template.Metadatatemplates
+            .Select(mt => new TemplateFieldDto(
+                mt.KeymetadataId,
+                mt.Keymetadata.Name ?? "",
+                mt.Keymetadata.Valuemetadata
+                    .Select(v => new ValueMetadataDto(v.Id, v.Name))
+                    .ToList()
+            ))
+            .ToList();
+
+        return new TemplateDetailDto(template.Id, template.Name, fields);
+    }
+
+    public async Task<int> CreateTemplateAsync(CreateTemplateDto dto)
+    {
+        var template = new Template { Name = dto.Name };
+        _db.Templates.Add(template);
+        await _db.SaveChangesAsync();
+
+        foreach (var keyId in dto.KeyIds)
+        {
+            _db.Metadatatemplates.Add(new Metadatatemplate 
+            { 
+                TemplateId = template.Id, 
+                KeymetadataId = keyId 
+            });
+        }
+
+        await _db.SaveChangesAsync();
+        return template.Id;
     }
 }

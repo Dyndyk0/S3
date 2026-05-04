@@ -7,14 +7,14 @@ public static class MinioEndpoints
     {
         // POST /uploadUrl
         app.MapPost("/uploadUrl", async (FileInitDto req, MinioService storage, DbService db, HttpContext context) => {
-            string link = await db.InitFileMetadataAsync(req.FileName, req.ValueIds);
+            (int id,string link) = await db.InitFileMetadataAsync(req.FileName, req.ValueIds);
 
             context.Items["LogFileName"] = link; 
 
             string minioPutUrl = await storage.GetUploadUrlAsync(link);
-            string publicHost = $"{context.Request.Scheme}://{context.Request.Host}:8080"; // Тут порт 8080 потому, что потому (удалить позднее) (Вспомнить зачем вообще эта строчка)
+            //string publicHost = $"{context.Request.Scheme}://{context.Request.Host}:8080"; // Тут порт 8080 потому, что потому (удалить позднее) (Вспомнить зачем вообще эта строчка)
             string maskedUrl = minioPutUrl.Replace($"http://{minioEndpoint}", "/minio");
-            return Results.Ok(maskedUrl);
+            return Results.Ok(new { id, uploadUrl = maskedUrl });
         });
 
         // GET /download

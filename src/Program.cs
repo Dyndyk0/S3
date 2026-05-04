@@ -40,6 +40,7 @@ app.Use(async (context, next) =>
 });
 
 app.MapDbEndpoints();
+app.MapTemplateEndpoints();
 app.MapMinioEndpoints(minioEndpoint);
 
 app.MapGet("/", async (HttpContext context) => {

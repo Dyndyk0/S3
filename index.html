@@ -184,26 +184,52 @@
 <body>
     <h1>XPEHb</h1>
 
-    <fieldset>
-        <legend>1. Настройка метаданных</legend>
-        <div class="filter-row">
-            <input type="text" id="newTypeName" placeholder="Новый тип (например: 'Документ')">
-            <button onclick="createType()">Добавить тип</button>
+    <div class="flex">
+        <div class="column" style="flex: 1;">
+            <h2>Управление типами и категориями</h2>
+            <div class="input-group">
+                <label><strong>Новый тип:</strong></label>
+                <input type="text" id="newTypeName" placeholder="Например: 'Документ'">
+                <button onclick="createType()" class="btn-success" style="width: 100%; margin-top: 8px;">Добавить тип</button>
+            </div>
+            
+            <div class="input-group" style="margin-top: 20px;">
+                <label><strong>Новая категория:</strong></label>
+                <select id="typeSelectForCat"></select>
+                <input type="text" id="newCatName" placeholder="Например: 'Договор'" style="margin-top: 8px;">
+                <button onclick="createCategory()" style="width: 100%; margin-top: 8px;">Добавить категорию</button>
+            </div>
         </div>
-        <div class="filter-row">
-            <select id="typeSelectForCat"></select>
-            <input type="text" id="newCatName" placeholder="Новая категория">
-            <button onclick="createCategory()">Добавить категорию</button>
-        </div>
-    </fieldset>
 
-    <fieldset>
-        <legend>2. Загрузка файла</legend>
-        <input type="file" id="fileInput">
-        <div id="tagSelectors">
-            <span style="color: var(--text-muted);">Загрузка категорий...</span>
+        <div class="column" style="flex: 1;">
+            <h2>Создание шаблона</h2>
+            <div class="input-group">
+                <label><strong>Имя шаблона:</strong></label>
+                <input type="text" id="templateNameInput" placeholder="Например: 'Шаблон отчета'">
+            </div>
+
+            <div id="templateTypesSelector" style="border: 1px solid var(--border); border-radius: 6px; padding: 12px; background: #f9fafb; margin-bottom: 15px; max-height: 150px; overflow-y: auto;">
+                <span style="color: var(--text-muted); font-size: 13px;">Выбирайте типы...</span>
+            </div>
+
+            <button onclick="createNewTemplate()" class="btn-success" style="width: 100%;">Создать шаблон</button>
         </div>
-        <button onclick="uploadFile()" id="uploadBtn" class="btn-success btn-large">
+    </div>
+        <div class="input-group">
+            <label for="templateSelect"><strong>Выберите шаблон:</strong></label>
+            <select id="templateSelect" onchange="loadTemplateFields()">
+                <option value="">-- Загрузка шаблонов --</option>
+            </select>
+        </div>
+
+        <input type="file" id="fileInput" style="margin-bottom: 15px;">
+        
+        <div id="templateFieldsContainer" style="border: 1px solid var(--border); border-radius: 6px; padding: 15px; background: #f9fafb; margin-bottom: 15px; display: none;">
+            <strong style="display: block; margin-bottom: 12px; color: var(--text-main);">Заполните поля шаблона:</strong>
+            <div id="templateFieldsContent"></div>
+        </div>
+
+        <button onclick="uploadFileWithTemplate()" id="uploadBtn" class="btn-success btn-large">
             Загрузить в Облако и БД
         </button>
     </fieldset>
@@ -264,57 +290,188 @@
     </div>
 
     <script>
-        let allMetadata = { types: [], cats: [] };
-        let activeSearchTags =[]; 
+        let allMetadata = [];
+        let activeSearchTags = [];
+        let currentTemplate = null;
 
-        // === ИНИЦИАЛИЗАЦИЯ МЕТАДАННЫХ ===
+        // === ИНИЦИАЛИЗАЦИЯ ШАБЛОНОВ И МЕТАДАННЫХ ===
         async function loadMetadata() {
             try {
                 const res = await fetch('/meta-data');
                 allMetadata = await res.json();
                 
-                const typeOptions = allMetadata.types.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+                // Обновляем выбор типов для форм
+                const typeOptions = allMetadata.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
                 document.getElementById('typeSelectForCat').innerHTML = typeOptions;
                 document.getElementById('searchTagType').innerHTML = typeOptions;
 
-                const tagContainer = document.getElementById('tagSelectors');
-                tagContainer.innerHTML = '<strong style="display:block; margin-bottom:8px; color:#374151;">Выберите категории при загрузке:</strong>';
-                allMetadata.cats.forEach(cat => {
-                    const typeName = allMetadata.types.find(t => t.id === cat.typeMetadataId)?.name || '?';
-                    tagContainer.innerHTML += `
-                        <label>
-                            <input type="checkbox" class="cat-checkbox" value="${cat.id}"> 
-                            <span><strong style="color:var(--primary);">[${typeName}]</strong> ${cat.name}</span>
-                        </label>`;
-                });
+                // Обновляем селектор типов для создания шаблона
+                renderTemplateTypesSelector();
+
+                await loadTemplates();
             } catch (e) { console.error("Ошибка метаданных:", e); }
+        }
+
+        function renderTemplateTypesSelector() {
+            const container = document.getElementById('templateTypesSelector');
+            if (!allMetadata || allMetadata.length === 0) {
+                container.innerHTML = '<span style="color:var(--text-muted);">Нет доступных типов</span>';
+                return;
+            }
+
+            container.innerHTML = '<strong style="display:block; margin-bottom:8px; color:#374151;">Выберите типы для шаблона:</strong>' +
+                allMetadata.map(type => `
+                    <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px; cursor: pointer;">
+                        <input type="checkbox" class="template-type-checkbox" value="${type.id}">
+                        <span>${type.name}</span>
+                    </label>
+                `).join('');
+        }
+
+        async function loadTemplates() {
+            try {
+                const res = await fetch('/templates');
+                const templates = await res.json();
+                
+                const select = document.getElementById('templateSelect');
+                select.innerHTML = '<option value="">-- Выберите шаблон --</option>' + 
+                    templates.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+            } catch (e) { console.error("Ошибка загрузки шаблонов:", e); }
+        }
+
+        async function loadTemplateFields() {
+            const templateId = document.getElementById('templateSelect').value;
+            const container = document.getElementById('templateFieldsContainer');
+            const fieldsContent = document.getElementById('templateFieldsContent');
+
+            if (!templateId) {
+                container.style.display = 'none';
+                currentTemplate = null;
+                return;
+            }
+
+            try {
+                const res = await fetch(`/templates/${templateId}`);
+                currentTemplate = await res.json();
+                
+                let html = '';
+                currentTemplate.fields.forEach(field => {
+                    const options = field.values.map(v => 
+                        `<option value="${v.id}">${v.name}</option>`
+                    ).join('');
+                    
+                    html += `
+                        <div class="input-group">
+                            <label><strong>${field.keyName}:</strong></label>
+                            <select class="template-field" data-key-id="${field.keyId}">
+                                <option value="">-- Выберите --</option>
+                                ${options}
+                            </select>
+                        </div>
+                    `;
+                });
+                
+                fieldsContent.innerHTML = html;
+                container.style.display = 'block';
+            } catch (e) {
+                console.error("Ошибка загрузки шаблона:", e);
+                alert('❌ Ошибка загрузки шаблона');
+            }
         }
 
         // === СОЗДАНИЕ МЕТАДАННЫХ ===
         async function createType() {
             const name = document.getElementById('newTypeName').value;
-            if(!name) return;
-            await fetch(`/types?name=${encodeURIComponent(name)}`, { method: 'POST' });
-            document.getElementById('newTypeName').value = '';
-            loadMetadata();
+            if(!name) return alert('Введите имя типа');
+            
+            try {
+                await fetch(`/types?name=${encodeURIComponent(name)}`, { method: 'POST' });
+                document.getElementById('newTypeName').value = '';
+                await loadMetadata();
+                alert('✅ Тип создан');
+            } catch (e) {
+                console.error(e);
+                alert('❌ Ошибка: ' + e.message);
+            }
         }
 
         async function createCategory() {
             const typeId = document.getElementById('typeSelectForCat').value;
             const name = document.getElementById('newCatName').value;
-            if(!name) return;
-            await fetch(`/categories?typeId=${typeId}&name=${encodeURIComponent(name)}`, { method: 'POST' });
-            document.getElementById('newCatName').value = '';
-            loadMetadata();
+            if(!name) return alert('Введите имя категории');
+            
+            try {
+                await fetch(`/categories?typeId=${typeId}&name=${encodeURIComponent(name)}`, { method: 'POST' });
+                document.getElementById('newCatName').value = '';
+                await loadMetadata();
+                alert('✅ Категория создана');
+            } catch (e) {
+                console.error(e);
+                alert('❌ Ошибка: ' + e.message);
+            }
         }
 
-        // === ЗАГРУЗКА ФАЙЛА ===
-        async function uploadFile() {
+        async function createNewTemplate() {
+            const name = document.getElementById('templateNameInput').value.trim();
+            if (!name) return alert('Введите имя шаблона');
+
+            const selectedKeyIds = Array.from(
+                document.querySelectorAll('.template-type-checkbox:checked')
+            ).map(cb => parseInt(cb.value));
+
+            if (selectedKeyIds.length === 0) {
+                return alert('Выберите хотя бы один тип для шаблона');
+            }
+
+            try {
+                const response = await fetch('/templates', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: name,
+                        keyIds: selectedKeyIds
+                    })
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.message || 'Ошибка создания шаблона');
+                }
+
+                document.getElementById('templateNameInput').value = '';
+                document.querySelectorAll('.template-type-checkbox').forEach(cb => cb.checked = false);
+                renderTemplateTypesSelector();
+                await loadTemplates();
+                alert('✅ Шаблон успешно создан!');
+            } catch (e) {
+                console.error(e);
+                alert('❌ Ошибка: ' + e.message);
+            }
+        }
+
+        // === ЗАГРУЗКА ФАЙЛА С ШАБЛОНОМ ===
+        async function uploadFileWithTemplate() {
             const fileInput = document.getElementById('fileInput');
             if (fileInput.files.length === 0) return alert('Выберите файл');
             
+            const templateId = document.getElementById('templateSelect').value;
+            if (!templateId) return alert('Выберите шаблон');
+
+            if (!currentTemplate) return alert('Шаблон не загружен');
+
+            // Собираем выбранные значения
+            const selectedValues = {};
+            document.querySelectorAll('.template-field').forEach(field => {
+                const valueId = parseInt(field.value);
+                if (!valueId) {
+                    alert(`Выберите значение для поля "${field.parentElement.querySelector('label').textContent}"`);
+                    throw new Error('Не все поля заполнены');
+                }
+                selectedValues[field.dataset.keyId] = valueId;
+            });
+
             const file = fileInput.files[0];
-            const checkedIds = Array.from(document.querySelectorAll('.cat-checkbox:checked')).map(cb => parseInt(cb.value));
+            const valueIds = Object.values(selectedValues);
 
             const btn = document.getElementById('uploadBtn');
             btn.disabled = true;
@@ -324,17 +481,18 @@
                 const response = await fetch('/uploadUrl', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ FileName: file.name, CategoryIds: checkedIds })
+                    body: JSON.stringify({ FileName: file.name, ValueIds: valueIds })
                 });
                 if (!response.ok) throw new Error('Ошибка сервера при получении URL');
-                const uploadUrl  = await response.json();
+                const { id, uploadUrl } = await response.json();
 
                 const minioRes = await fetch(uploadUrl, { method: 'PUT', body: file });
-
                 if (!minioRes.ok) throw new Error('MinIO отклонил файл');
 
                 alert('✅ Успешно загружено!');
-                fileInput.value = ''; // сброс файла
+                fileInput.value = '';
+                document.getElementById('templateSelect').value = '';
+                document.getElementById('templateFieldsContainer').style.display = 'none';
                 searchFiles(); 
                 loadMinioFiles();
             } catch (e) {
@@ -349,16 +507,16 @@
         // === УПРАВЛЕНИЕ ФИЛЬТРАМИ ===
         function addSearchTag() {
             const select = document.getElementById('searchTagType');
-            const typeId = parseInt(select.value);
+            const keyId = parseInt(select.value);
             const typeName = select.options[select.selectedIndex].text;
-            const category = document.getElementById('searchTagCat').value.trim();
+            const value = document.getElementById('searchTagCat').value.trim();
 
-            if (!category) {
+            if (!value) {
                 alert("Введите часть названия категории для поиска");
                 return;
             }
 
-            activeSearchTags.push({ typeId, typeName, category });
+            activeSearchTags.push({ keyId, typeName, value });
             document.getElementById('searchTagCat').value = ''; 
             renderSearchTags();
         }
@@ -377,7 +535,7 @@
 
             container.innerHTML = activeSearchTags.map((t, index) => `
                 <div class="tag-badge">
-                    [${t.typeName}] содержит "${t.category}"
+                    [${t.typeName}] содержит "${t.value}"
                     <button onclick="removeSearchTag(${index})" title="Удалить фильтр">×</button>
                 </div>
             `).join('');
@@ -390,7 +548,6 @@
             const dateFromRaw = document.getElementById('searchDateFrom').value;
             const dateToRaw = document.getElementById('searchDateTo').value;
 
-            // Формируем параметры для GET-запроса
             const params = new URLSearchParams();
             params.append('offset', offset);
             params.append('limit', limit);
@@ -398,18 +555,14 @@
             if (dateFromRaw) params.append('dateFrom', new Date(dateFromRaw).toISOString());
             if (dateToRaw) params.append('dateTo', new Date(dateToRaw).toISOString());
 
-            // Если есть теги, запаковываем их в JSON-строку
-            const tags = activeSearchTags.map(t => ({ typeId: t.typeId, category: t.category }));
+            const tags = activeSearchTags.map(t => ({ keyId: t.keyId, value: t.value }));
             if (tags.length > 0) {
                 params.append('tagsJson', JSON.stringify(tags));
             }
 
             try {
-                // Теперь это GET-запрос к эндпоинту /files с параметрами
                 const res = await fetch(`/files?${params.toString()}`);
-                
                 if (!res.ok) throw new Error('Ошибка сервера');
-                
                 const files = await res.json();
                 renderDbTable(files);
             } catch (e) {
@@ -427,7 +580,7 @@
 
             tbody.innerHTML = files.map(f => {
                 const dateStr = f.lastUpdated ? new Date(f.lastUpdated).toLocaleString() : '—';
-                const tagsHtml = (f.tags || []).map(t => `<span class="tag-badge db-tag">[${t.type}] ${t.cat}</span>`).join(' ');
+                const tagsHtml = (f.tags || []).map(t => `<span class="tag-badge db-tag">[${t.key}] ${t.value}</span>`).join(' ');
                 
                 return `
                 <tr>
@@ -462,7 +615,7 @@
                     </li>
                 `).join('');
             } catch(e) {
-                 console.error("Ошибка загрузки Minio:", e);
+                console.error("Ошибка загрузки Minio:", e);
             }
         }
 

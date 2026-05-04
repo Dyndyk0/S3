@@ -2,7 +2,7 @@ using System.Text.Json.Serialization;
 
 namespace XPEHb.Models.Dtos;
 
-public record TagDto(int? KeyId, string Key, int ValueId, string Value);
+public record TagDto(int? KeyId, string? Key, int ValueId, string Value);
 
 public class FileDto {
     public int Id { get; set; }
@@ -14,6 +14,15 @@ public class FileDto {
     [JsonIgnore]
     public string? TagsRaw { get; set; } 
 }
+
+public record ValueMetadataDto(int Id, string Name);
+public record KeyMetadataDto(int Id, string? Name, List<ValueMetadataDto> Values);
+
+// Template DTOs
+public record TemplateDto(int Id, string Name);
+public record TemplateDetailDto(int Id, string Name, List<TemplateFieldDto> Fields);
+public record TemplateFieldDto(int KeyId, string KeyName, List<ValueMetadataDto> Values);
+public record CreateTemplateDto(string Name, List<int> KeyIds);
 
 public record FileInitDto(string FileName, List<int> ValueIds);
 public record MinioFileDto(string Key, ulong Size, DateTime? LastModified); // Это для отладки
@@ -31,6 +40,5 @@ public class FileFilterDto
     public int Limit { get; set; } = 100;
     public DateTime? DateFrom { get; set; }
     public DateTime? DateTo { get; set; }
-    
     public string? TagsJson { get; set; } 
 }
