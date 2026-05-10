@@ -12,18 +12,18 @@ public class DbService
         _db = db;
     }
 
-public async Task<IEnumerable<KeyMetadataDto>> GetMetadataAsync()
-{
-    var keys = await _db.Keymetadata
-        .Select(k => new KeyMetadataDto(
-            k.Id, 
-            k.Name,
-            k.Valuemetadata.Select(v => new ValueMetadataDto(v.Id, v.Name)).ToList()
-        ))
-        .ToListAsync();
+    public async Task<IEnumerable<KeyWithValuesMetadataDto>> GetMetadataAsync()
+    {
+        var keys = await _db.Keymetadata
+            .Select(k => new KeyWithValuesMetadataDto(
+                k.Id, 
+                k.Name,
+                k.Valuemetadata.Select(v => new ValueMetadataDto(v.Id, v.Name)).ToList()
+            ))
+            .ToListAsync();
 
-    return keys;
-}
+        return keys;
+    }
 
     public async Task<IEnumerable<FileDto>> GetFilesAsync(FileFilterDto filter)
     {
@@ -136,11 +136,112 @@ public async Task<IEnumerable<KeyMetadataDto>> GetMetadataAsync()
         }
     }
 
-    public async Task CreateTypeAsync(string name)
+
+    // KeyMetadata
+    public async Task<IEnumerable<KeyMetadataDto>> GetKeysMetadataAsync(KeyMetadataFilterDto filter)
+    {
+        var query = _db.Keymetadata.AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(filter.Name))
+        {
+            string pattern = $"%{filter.Name}%";
+            query = query.Where(k => k.Name != null && EF.Functions.Like(k.Name, pattern));
+        }
+
+        var keys = await query
+            .OrderBy(k => k.Id)
+            .Skip(filter.Offset)
+            .Take(filter.Limit)
+            .Select(k => new KeyMetadataDto(
+                k.Id,
+                k.Name
+            ))
+            .ToListAsync();
+
+        return keys;
+    }
+    
+    public async Task CreateKeyMetadataAsync(string name)
     {
         _db.Keymetadata.Add(new Keymetadatum { Name = name });
         await _db.SaveChangesAsync();
     }
+    
+    public async Task UpdateKeyMetadataAsync(int id, string? name)
+    {
+        var key = await _db.Keymetadata.FindAsync(id);
+        if (key != null)
+        {
+            key.Name = name;
+            await _db.SaveChangesAsync();
+        }
+    }
+    
+    public async Task DeleteKeyMetadataAsync(int id)
+    {
+        var key = await _db.Keymetadata.Include(k => k.Valuemetadata).FirstOrDefaultAsync(k => k.Id == id);
+        if (key != null)
+        {
+            _db.Valuemetadata.RemoveRange(key.Valuemetadata);
+            _db.Keymetadata.Remove(key);
+            await _db.SaveChangesAsync();
+        }
+    }
+
+
+    // ValueMetadata
+    public async Task<IEnumerable<ValueMetadataDto>> GetValueMetadataAsync(ValueMetadataFilterDto filter)
+    {
+        var query = _db.Valuemetadata.AsQueryable();
+
+        if (filter.KeyId.HasValue)
+            query = query.Where(v => v.KeymetadataId == filter.KeyId.Value);
+
+        if (!string.IsNullOrWhiteSpace(filter.Name))
+        {
+            string pattern = $"%{filter.Name}%";
+            query = query.Where(v => v.Name != null && EF.Functions.Like(v.Name, pattern));
+        }
+
+        var values = await query
+            .OrderBy(v => v.Id)
+            .Skip(filter.Offset)
+            .Take(filter.Limit)
+            .Select(v => new ValueMetadataDto(
+                v.Id,
+                v.Name
+            ))
+            .ToListAsync();
+
+        return values;
+    }
+
+    public async Task CreateValueMetadataAsync(int keyMetadataId, string name)
+    {
+        _db.Valuemetadata.Add(new Valuemetadatum { KeymetadataId = keyMetadataId, Name = name });
+        await _db.SaveChangesAsync();
+    }
+
+    public async Task UpdateValueMetadataAsync(ValueMetadataDto dto)
+    {
+        var value = await _db.Valuemetadata.FindAsync(dto.Id);
+        if (value != null)
+        {
+            value.Name = dto.Name;
+            await _db.SaveChangesAsync();
+        }
+    }
+
+    public async Task DeleteValueMetadataAsync(int id)
+    {
+        var value = await _db.Valuemetadata.FindAsync(id);
+        if (value != null)
+        {
+            _db.Valuemetadata.Remove(value);
+            await _db.SaveChangesAsync();
+        }
+    }
+    
 
     public async Task CreateCategoryAsync(int KeymetadataId, string name)
     {
@@ -148,7 +249,8 @@ public async Task<IEnumerable<KeyMetadataDto>> GetMetadataAsync()
         await _db.SaveChangesAsync();
     }
 
-    // === Template Methods ===
+
+    // Template
     public async Task<IEnumerable<TemplateDto>> GetAllTemplatesAsync()
     {
         var templates = await _db.Templates

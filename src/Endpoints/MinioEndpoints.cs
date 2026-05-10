@@ -3,6 +3,7 @@ using XPEHb.Models.Dtos;
 
 public static class MinioEndpoints
 {
+
     public static void MapMinioEndpoints(this IEndpointRouteBuilder app, string minioEndpoint)
     {
         // POST /uploadUrl

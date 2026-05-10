@@ -35,7 +35,7 @@ public static class DbEndpoints
 
         // POST /types
         app.MapPost("/types", async (string name, DbService db) => {
-            await db.CreateTypeAsync(name);
+            await db.CreateKeyMetadataAsync(name);
             return Results.Ok();
         });
 

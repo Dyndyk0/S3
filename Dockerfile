@@ -17,5 +17,5 @@ RUN dotnet publish "XPEHb.csproj" -c Release -o /XPEHb/publish
 FROM base AS final
 WORKDIR /XPEHb
 COPY --from=publish /XPEHb/publish .
-COPY index.html ./
+COPY /src/wwwroot ./wwwroot
 ENTRYPOINT ["dotnet", "XPEHb.dll"]

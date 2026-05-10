@@ -11,7 +11,7 @@ builder.Services.AddDbContext<XPEHb.src.Models.Entities.MyDbContext>(options => 
 builder.Services.AddMinio(options => {
     options.WithEndpoint(minioEndpoint);
     options.WithCredentials(Environment.GetEnvironmentVariable("MINIO_USER"), Environment.GetEnvironmentVariable("MINIO_PASSWORD"));
-    options.WithCredentials(Environment.GetEnvironmentVariable("ACCESS_KEY"), Environment.GetEnvironmentVariable("SECRET_KEY"));
+    //options.WithCredentials(Environment.GetEnvironmentVariable("ACCESS_KEY"), Environment.GetEnvironmentVariable("SECRET_KEY"));
     options.WithSSL(false);
 });
 
@@ -41,11 +41,11 @@ app.Use(async (context, next) =>
 
 app.MapDbEndpoints();
 app.MapTemplateEndpoints();
+app.MapKeyMetadataEndpoints();
+app.MapValueMetadataEndpoints();
 app.MapMinioEndpoints(minioEndpoint);
 
-app.MapGet("/", async (HttpContext context) => {
-    if (File.Exists("index.html")) return Results.Content(await File.ReadAllTextAsync("index.html"), "text/html");
-    return Results.NotFound();
-});
+app.UseDefaultFiles();
+app.UseStaticFiles();
 
 app.Run();
