@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace XPEHb.src.Models.Entities;
+namespace XPEHb.Models.Entities;
 
 public partial class Template
 {

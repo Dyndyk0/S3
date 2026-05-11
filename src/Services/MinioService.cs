@@ -12,7 +12,8 @@ public class MinioService
     public MinioService(IMinioClient client, IConfiguration config)
     {
         _client = client;
-        _bucket = Environment.GetEnvironmentVariable("MINIO_BUCKET"); // Надо выдавать ошибку при null
+        string? bucket = Environment.GetEnvironmentVariable("MINIO_BUCKET");
+        _bucket = bucket ?? throw new ArgumentNullException(nameof(bucket));
     }
 
     public async Task<string> GetUploadUrlAsync(string fileName)
@@ -23,7 +24,7 @@ public class MinioService
             .WithExpiry(600);
         return await _client.PresignedPutObjectAsync(args);
     }
-
+    // Уменьшить время жизни ссылки для загрузки
     public async Task<string> GetDownloadUrlAsync(string fileName)
     {
         var args = new PresignedGetObjectArgs()

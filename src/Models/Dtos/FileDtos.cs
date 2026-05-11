@@ -17,11 +17,10 @@ public class FileDto {
 
 public record FileInitDto(string FileName, List<int> ValueIds);
 public record TagFilterDto(int KeyId, string Value);
-public class FileFilterDto
-{
-    public int Offset { get; set; } = 0;
-    public int Limit { get; set; } = 100;
-    public DateTime? DateFrom { get; set; }
-    public DateTime? DateTo { get; set; }
-    public string? TagsJson { get; set; } 
-}
+public record FileFilterDto(
+    int? Offset,
+    int? Limit,
+    DateTime? DateFrom,
+    DateTime? DateTo,
+    string? TagsJson
+);

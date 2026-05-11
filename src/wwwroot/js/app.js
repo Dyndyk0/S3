@@ -23,9 +23,10 @@ const APP = {
     // === ИНИЦИАЛИЗАЦИЯ ===
     async init() {
         try {
+            await Layout.loadShell();
             await this.loadInitialData();
             this.attachEventListeners();
-            UI.switchTab('files');
+            //UI.switchTab('files');
         } catch (e) {
             console.error('Ошибка инициализации:', e);
             UI.showNotification('Ошибка инициализации приложения', 'error');

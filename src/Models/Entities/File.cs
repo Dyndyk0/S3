@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace XPEHb.src.Models.Entities;
+namespace XPEHb.Models.Entities;
 
 public partial class File
 {
@@ -10,6 +10,8 @@ public partial class File
     public string Name { get; set; } = null!;
 
     public string Link { get; set; } = null!;
+
+    public DateTime? DateUpload { get; set; }
 
     public DateTime? LastUpdated { get; set; }
 

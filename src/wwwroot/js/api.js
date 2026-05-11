@@ -5,9 +5,33 @@
 
 const API = {
     // === МЕТАДАННЫЕ ===
-    async loadMetadata() {
-        const res = await fetch('/meta-data');
+    async loadKeyMetadata() {
+        const res = await fetch('/keymetadata');
+        if (!res.ok) throw new Error('Ошибка загрузки ключей метаданных');
         return await res.json();
+    },
+
+    async loadValueMetadata() {
+        const res = await fetch('/valuemetadata');
+        if (!res.ok) throw new Error('Ошибка загрузки значений метаданных');
+        return await res.json();
+    },
+
+    async loadMetadata() {
+        const keys = await this.loadKeyMetadata();
+        const values = await this.loadValueMetadata();
+
+        const valuesMap = (values || []).reduce((acc, item) => {
+            const keyId = item.keyId ?? item.KeyId ?? 0;
+            if (!acc[keyId]) acc[keyId] = [];
+            acc[keyId].push(item);
+            return acc;
+        }, {});
+
+        return (keys || []).map(key => ({
+            ...key,
+            values: valuesMap[key.id] || []
+        }));
     },
 
     async createKeyMetadata(name) {

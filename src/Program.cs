@@ -39,11 +39,11 @@ app.Use(async (context, next) =>
     await next(context);
 });
 
-app.MapDbEndpoints();
+app.MapFileEndpoints(minioEndpoint);
 app.MapTemplateEndpoints();
 app.MapKeyMetadataEndpoints();
 app.MapValueMetadataEndpoints();
-app.MapMinioEndpoints(minioEndpoint);
+app.MapMinioEndpoints();
 
 app.UseDefaultFiles();
 app.UseStaticFiles();

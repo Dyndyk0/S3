@@ -1,0 +1,15 @@
+<div id="tab-keys" class="tab-content">
+    <div class="card">
+        <h2>Ключи метаданных</h2>
+        <div class="input-group">
+            <label>Поиск ключей</label>
+            <input type="text" id="keySearchInput" placeholder="Введите часть имени" onkeyup="APP.searchKeys(this.value)">
+        </div>
+        <div class="input-group">
+            <label>Новый ключ</label>
+            <input type="text" id="newKeyName" placeholder="Имя ключа">
+            <button class="btn-success btn-block" onclick="APP.createKeyMetadata()">Добавить ключ</button>
+        </div>
+        <div id="keyMetadataList" class="metadata-list"></div>
+    </div>
+</div>

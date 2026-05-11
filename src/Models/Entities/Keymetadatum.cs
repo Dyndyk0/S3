@@ -1,12 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
-namespace XPEHb.src.Models.Entities;
+
+namespace XPEHb.Models.Entities;
 
 public partial class Keymetadatum
 {
     public int Id { get; set; }
 
-    public string? Name { get; set; }
+    public string Name { get; set; } = null!;
 
     public virtual ICollection<Metadatatemplate> Metadatatemplates { get; set; } = new List<Metadatatemplate>();
 

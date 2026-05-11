@@ -7,6 +7,7 @@ CREATE TABLE File (
     id SERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     link VARCHAR(255) NOT NULL,
+    date_upload TIMESTAMP,
     last_updated TIMESTAMP,
     is_uploaded BOOLEAN NOT NULL,
     is_deleted BOOLEAN NOT NULL

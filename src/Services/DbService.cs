@@ -1,28 +1,15 @@
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 using XPEHb.Models.Dtos;
-using XPEHb.src.Models.Entities;
+using XPEHb.Models.Entities;
 namespace XPEHb.Services;
 public class DbService
 {
-    private readonly MyDbContext _db;
+    private readonly MetaContext _db;
 
-    public DbService(MyDbContext db)
+    public DbService(MetaContext db)
     {
         _db = db;
-    }
-
-    public async Task<IEnumerable<KeyWithValuesMetadataDto>> GetMetadataAsync()
-    {
-        var keys = await _db.Keymetadata
-            .Select(k => new KeyWithValuesMetadataDto(
-                k.Id, 
-                k.Name,
-                k.Valuemetadata.Select(v => new ValueMetadataDto(v.Id, v.Name)).ToList()
-            ))
-            .ToListAsync();
-
-        return keys;
     }
 
     public async Task<IEnumerable<FileDto>> GetFilesAsync(FileFilterDto filter)
@@ -60,8 +47,8 @@ public class DbService
 
         var result = await query
             .OrderByDescending(f => f.LastUpdated)
-            .Skip(filter.Offset)
-            .Take(filter.Limit)
+            .Skip(filter.Offset ?? 0)
+            .Take(filter.Limit ?? 100)
             .ToListAsync();
 
         var dtos = result.Select(f => new FileDto
@@ -88,10 +75,11 @@ public class DbService
 
     public async Task<(int id, string link)> InitFileMetadataAsync(string fileName, List<int> valueMetadataIds)
     {
-        var file = new src.Models.Entities.File
+        var file = new Models.Entities.File
         {
             Name = fileName,
             Link = "temp_link",
+            DateUpload = DateTime.Now,
             LastUpdated = DateTime.Now,
             IsUploaded = false,
             IsDeleted = false
@@ -150,8 +138,8 @@ public class DbService
 
         var keys = await query
             .OrderBy(k => k.Id)
-            .Skip(filter.Offset)
-            .Take(filter.Limit)
+            .Skip(filter.Offset ?? 0)
+            .Take(filter.Limit ?? 100)
             .Select(k => new KeyMetadataDto(
                 k.Id,
                 k.Name
@@ -205,11 +193,12 @@ public class DbService
 
         var values = await query
             .OrderBy(v => v.Id)
-            .Skip(filter.Offset)
-            .Take(filter.Limit)
+            .Skip(filter.Offset ?? 0)
+            .Take(filter.Limit ?? 100)
             .Select(v => new ValueMetadataDto(
                 v.Id,
-                v.Name
+                v.Name,
+                v.KeymetadataId
             ))
             .ToListAsync();
 
@@ -242,14 +231,6 @@ public class DbService
         }
     }
     
-
-    public async Task CreateCategoryAsync(int KeymetadataId, string name)
-    {
-        _db.Valuemetadata.Add(new Valuemetadatum { KeymetadataId = KeymetadataId, Name = name });
-        await _db.SaveChangesAsync();
-    }
-
-
     // Template
     public async Task<IEnumerable<TemplateDto>> GetAllTemplatesAsync()
     {
@@ -275,7 +256,7 @@ public class DbService
                 mt.KeymetadataId,
                 mt.Keymetadata.Name ?? "",
                 mt.Keymetadata.Valuemetadata
-                    .Select(v => new ValueMetadataDto(v.Id, v.Name))
+                    .Select(v => new ValueMetadataDto(v.Id, v.Name, v.KeymetadataId))
                     .ToList()
             ))
             .ToList();
