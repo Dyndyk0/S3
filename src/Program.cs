@@ -6,7 +6,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 string minioEndpoint = Environment.GetEnvironmentVariable("MINIO_HOST") + ":" + Environment.GetEnvironmentVariable("MINIO_PORT");
 
-builder.Services.AddDbContext<XPEHb.src.Models.Entities.MyDbContext>(options => options.UseNpgsql(Environment.GetEnvironmentVariable("HOST_STRING")));
+builder.Services.AddDbContext<XPEHb.Models.Entities.MetaContext>(options => options.UseNpgsql(Environment.GetEnvironmentVariable("HOST_STRING")));
 
 builder.Services.AddMinio(options => {
     options.WithEndpoint(minioEndpoint);

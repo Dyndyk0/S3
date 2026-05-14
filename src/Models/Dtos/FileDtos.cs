@@ -22,5 +22,8 @@ public record FileFilterDto(
     int? Limit,
     DateTime? DateFrom,
     DateTime? DateTo,
-    string? TagsJson
+    string? TagsJson,
+    List<int>? TagIds,
+    string? SortBy,
+    bool SortDescending = true
 );

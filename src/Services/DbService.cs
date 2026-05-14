@@ -45,8 +45,29 @@ public class DbService
             }
         }
 
+        if (filter.TagIds != null && filter.TagIds.Any())
+        {
+            foreach (var tagId in filter.TagIds)
+            {
+                query = query.Where(f => f.Metadata.Any(m => m.ValuemetadataId == tagId));
+            }
+        }
+
+        query = filter.SortBy?.ToLowerInvariant() switch
+        {
+            "dateupload" => filter.SortDescending
+                ? query.OrderByDescending(f => f.DateUpload)
+                : query.OrderBy(f => f.DateUpload),
+            "lastupdated" => filter.SortDescending
+                ? query.OrderByDescending(f => f.LastUpdated)
+                : query.OrderBy(f => f.LastUpdated),
+            "name" => filter.SortDescending
+                ? query.OrderByDescending(f => f.Name)
+                : query.OrderBy(f => f.Name),
+            _ => query.OrderByDescending(f => f.LastUpdated)
+        };
+
         var result = await query
-            .OrderByDescending(f => f.LastUpdated)
             .Skip(filter.Offset ?? 0)
             .Take(filter.Limit ?? 100)
             .ToListAsync();
