@@ -9,6 +9,8 @@ public partial class File
 
     public string Name { get; set; } = null!;
 
+    public string FileExtension { get; set; } = null!;
+
     public string Link { get; set; } = null!;
 
     public DateTime? DateUpload { get; set; }

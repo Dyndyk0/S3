@@ -42,6 +42,9 @@ public partial class MetaContext : DbContext
             entity.Property(e => e.DateUpload)
                 .HasColumnType("timestamp without time zone")
                 .HasColumnName("date_upload");
+            entity.Property(e => e.FileExtension)
+                .HasMaxLength(255)
+                .HasColumnName("file_extension");
             entity.Property(e => e.IsDeleted).HasColumnName("is_deleted");
             entity.Property(e => e.IsUploaded).HasColumnName("is_uploaded");
             entity.Property(e => e.LastUpdated)

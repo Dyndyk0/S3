@@ -5,14 +5,16 @@ public static class MinioEndpoints
 {
     public static void MapMinioEndpoints(this IEndpointRouteBuilder app)
     {
+        var group = app.MapGroup("/api").WithTags("minio");
+        
         // GET /filesMinio
-        app.MapGet("/filesMinio", async (MinioService storage) => {
+        group.MapGet("/filesMinio", async (MinioService storage) => {
             var files = await storage.ListAllFilesAsync();
             return Results.Ok(files);
         });
 
         // POST /minio-webhook
-        app.MapPost("/minio-webhook", async (MinioWebhookDto payload, DbService db) => {
+        group.MapPost("/minio-webhook", async (MinioWebhookDto payload, DbService db) => {
             
             if (payload?.Records == null || !payload.Records.Any())
                 return Results.Ok();

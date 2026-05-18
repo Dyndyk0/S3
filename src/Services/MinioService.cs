@@ -16,21 +16,25 @@ public class MinioService
         _bucket = bucket ?? throw new ArgumentNullException(nameof(bucket));
     }
 
-    public async Task<string> GetUploadUrlAsync(string fileName)
+    public async Task<string> GetUploadUrlAsync(string fileName, string minioEndpoint)
     {
         var args = new PresignedPutObjectArgs()
             .WithBucket(_bucket)
             .WithObject(fileName)
             .WithExpiry(600);
-        return await _client.PresignedPutObjectAsync(args);
+        string minioPutUrl = await _client.PresignedPutObjectAsync(args);
+        return minioPutUrl.Replace($"http://{minioEndpoint}", "/minio");;
     }
     // Уменьшить время жизни ссылки для загрузки
-    public async Task<string> GetDownloadUrlAsync(string fileName)
+    public async Task<string> GetDownloadUrlAsync(string fileLink, string fileName)
     {
         var args = new PresignedGetObjectArgs()
             .WithBucket(_bucket)
-            .WithObject(fileName)
-            .WithExpiry(3600);
+            .WithObject(fileLink)
+            .WithExpiry(3600)
+            .WithHeaders(new Dictionary<string, string> {
+        { "response-content-disposition", "attachment; filename=" + fileName }
+    });
         return await _client.PresignedGetObjectAsync(args);
     }
 

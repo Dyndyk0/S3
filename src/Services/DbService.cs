@@ -76,7 +76,9 @@ public class DbService
         {
             Id = f.Id,
             Name = f.Name,
+            FileExtension = f.FileExtension,
             Link = f.Link,
+            DateUpload = f.DateUpload,
             LastUpdated = f.LastUpdated,
             Tags = f.Metadata.Select(m => new TagDto(
                 m.Valuemetadata.KeymetadataId, 
@@ -94,11 +96,12 @@ public class DbService
         return file?.Link;
     }
 
-    public async Task<(int id, string link)> InitFileMetadataAsync(string fileName, List<int> valueMetadataIds)
+    public async Task<(int id, string link)> InitFileMetadataAsync(string fileName, string fileExtension, List<int> valueMetadataIds)
     {
         var file = new Models.Entities.File
         {
             Name = fileName,
+            FileExtension = fileExtension,
             Link = "temp_link",
             DateUpload = DateTime.Now,
             LastUpdated = DateTime.Now,
@@ -145,6 +148,41 @@ public class DbService
         }
     }
 
+    public async Task<(int id, string newLink)> UpdateFileAsync(int fileId, List<int>? newValueIds, string? fileName, string? fileExtension)
+    {
+        var file = await _db.Files.Include(f => f.Metadata).FirstOrDefaultAsync(f => f.Id == fileId);
+        if (file == null) return (0, "");
+
+        if (newValueIds != null)
+        {
+            _db.Metadata.RemoveRange(file.Metadata);
+            
+            foreach (var valueId in newValueIds)
+            {
+                _db.Metadata.Add(new Metadata { FileId = file.Id, ValuemetadataId = valueId });
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(fileName))
+        {
+            file.Name = fileName;
+        }
+
+        if (!string.IsNullOrWhiteSpace(fileExtension))
+        {
+            file.FileExtension = fileExtension;
+        }
+
+        file.LastUpdated = DateTime.Now;
+        await _db.SaveChangesAsync();
+        return (file.Id, file.Link);
+    }
+
+    public async Task<string?> GetFileNameWithFileExtensionByIdAsync(int fileId)
+    {
+        var file = await _db.Files.FirstOrDefaultAsync(f => f.Id == fileId);
+        return file != null ? $"{file.Name}.{file.FileExtension}" : null;
+    }
 
     // KeyMetadata
     public async Task<IEnumerable<KeyMetadataDto>> GetKeysMetadataAsync(KeyMetadataFilterDto filter)
@@ -176,7 +214,7 @@ public class DbService
         await _db.SaveChangesAsync();
     }
     
-    public async Task UpdateKeyMetadataAsync(int id, string? name)
+    public async Task UpdateKeyMetadataAsync(int id, string name)
     {
         var key = await _db.Keymetadata.FindAsync(id);
         if (key != null)
@@ -253,12 +291,33 @@ public class DbService
     }
     
     // Template
-    public async Task<IEnumerable<TemplateDto>> GetAllTemplatesAsync()
+    public async Task<(IEnumerable<TemplateDto> Items, int Total)> GetTemplatesAsync(TemplateFilterDto filter)
     {
-        var templates = await _db.Templates
+        var query = _db.Templates.AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(filter?.Name))
+        {
+            var pattern = $"%{filter.Name}%";
+            query = query.Where(t => t.Name != null && EF.Functions.ILike(t.Name, pattern));
+        }
+
+        var total = await query.CountAsync();
+
+        query = query.OrderBy(t => t.Id);
+
+        var items = await query
+            .Skip(filter?.Offset ?? 0)
+            .Take(filter?.Limit ?? 100)
             .Select(t => new TemplateDto(t.Id, t.Name))
             .ToListAsync();
-        return templates;
+
+        return (items, total);
+    }
+
+    public async Task<IEnumerable<TemplateDto>> GetAllTemplatesAsync()
+    {
+        var (items, _) = await GetTemplatesAsync(new TemplateFilterDto { Offset = 0, Limit = 100 });
+        return items;
     }
 
     public async Task<TemplateDetailDto?> GetTemplateDetailAsync(int templateId)
@@ -291,6 +350,12 @@ public class DbService
         _db.Templates.Add(template);
         await _db.SaveChangesAsync();
 
+        if (dto.KeyIds?.Count == 0 || dto.KeyIds == null)
+        {
+            await _db.SaveChangesAsync();
+            return template.Id;
+        }
+
         foreach (var keyId in dto.KeyIds)
         {
             _db.Metadatatemplates.Add(new Metadatatemplate 
@@ -302,5 +367,50 @@ public class DbService
 
         await _db.SaveChangesAsync();
         return template.Id;
+    }
+
+    public async Task<bool> UpdateTemplateAsync(int templateId, CreateTemplateDto dto)
+    {
+        var template = await _db.Templates
+            .Include(t => t.Metadatatemplates)
+            .FirstOrDefaultAsync(t => t.Id == templateId);
+
+        if (template == null) return false;
+        
+        template.Name = dto.Name;
+        _db.Metadatatemplates.RemoveRange(template.Metadatatemplates);
+        
+        if (dto.KeyIds?.Count == 0 || dto.KeyIds == null)
+        {
+            await _db.SaveChangesAsync();
+            return true;
+        }
+        foreach (var keyId in dto.KeyIds)
+        {
+            _db.Metadatatemplates.Add(new Metadatatemplate
+            {
+                TemplateId = template.Id,
+                KeymetadataId = keyId
+            });
+        }
+
+        await _db.SaveChangesAsync();
+        return true;
+    }
+
+    public async Task<bool> DeleteTemplateAsync(int templateId)
+    {
+        var template = await _db.Templates
+            .Include(t => t.Metadatatemplates)
+            .FirstOrDefaultAsync(t => t.Id == templateId);
+
+        if (template == null)
+            return false;
+
+        _db.Metadatatemplates.RemoveRange(template.Metadatatemplates);
+        _db.Templates.Remove(template);
+        await _db.SaveChangesAsync();
+
+        return true;
     }
 }

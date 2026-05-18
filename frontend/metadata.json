@@ -1,0 +1,6 @@
+{
+  "name": "Files API Admin Panel",
+  "description": "Dashboard for managing files, templates, and metadata via REST API",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}
