@@ -23,7 +23,7 @@ public class MinioService
             .WithObject(fileName)
             .WithExpiry(600);
         string minioPutUrl = await _client.PresignedPutObjectAsync(args);
-        return minioPutUrl.Replace($"http://{minioEndpoint}", "/minio");;
+        return minioPutUrl.Replace($"http://{minioEndpoint}", "/api/minio");;
     }
     // Уменьшить время жизни ссылки для загрузки
     public async Task<string> GetDownloadUrlAsync(string fileLink, string fileName)

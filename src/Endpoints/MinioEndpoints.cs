@@ -14,7 +14,7 @@ public static class MinioEndpoints
         });
 
         // POST /minio-webhook
-        group.MapPost("/minio-webhook", async (MinioWebhookDto payload, DbService db) => {
+        group.MapPost("/minio-webhook", async (MinioWebhookDto payload, FileService db) => {
             
             if (payload?.Records == null || !payload.Records.Any())
                 return Results.Ok();

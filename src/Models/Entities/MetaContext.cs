@@ -65,6 +65,10 @@ public partial class MetaContext : DbContext
             entity.ToTable("keymetadata");
 
             entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.DataType)
+                .HasMaxLength(50)
+                .HasDefaultValueSql("'text'::character varying")
+                .HasColumnName("data_type");
             entity.Property(e => e.Name)
                 .HasMaxLength(255)
                 .HasColumnName("name");
@@ -78,6 +82,13 @@ public partial class MetaContext : DbContext
 
             entity.Property(e => e.Id).HasColumnName("id");
             entity.Property(e => e.FileId).HasColumnName("file_id");
+            entity.Property(e => e.KeymetadataId).HasColumnName("keymetadata_id");
+            entity.Property(e => e.ValueBoolean).HasColumnName("value_boolean");
+            entity.Property(e => e.ValueDate)
+                .HasColumnType("timestamp without time zone")
+                .HasColumnName("value_date");
+            entity.Property(e => e.ValueNumber).HasColumnName("value_number");
+            entity.Property(e => e.ValueString).HasColumnName("value_string");
             entity.Property(e => e.ValuemetadataId).HasColumnName("valuemetadata_id");
 
             entity.HasOne(d => d.File).WithMany(p => p.Metadata)
@@ -85,9 +96,13 @@ public partial class MetaContext : DbContext
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("metadata_file_id_fkey");
 
+            entity.HasOne(d => d.Keymetadata).WithMany(p => p.Metadata)
+                .HasForeignKey(d => d.KeymetadataId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("metadata_keymetadata_id_fkey");
+
             entity.HasOne(d => d.Valuemetadata).WithMany(p => p.Metadata)
                 .HasForeignKey(d => d.ValuemetadataId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("metadata_valuemetadata_id_fkey");
         });
 
@@ -97,7 +112,11 @@ public partial class MetaContext : DbContext
 
             entity.ToTable("metadatatemplate");
 
+            entity.HasIndex(e => new { e.KeymetadataId, e.TemplateId }, "metadatatemplate_keymetadata_id_template_id_key").IsUnique();
+
             entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.IsMultiple).HasColumnName("is_multiple");
+            entity.Property(e => e.IsRequired).HasColumnName("is_required");
             entity.Property(e => e.KeymetadataId).HasColumnName("keymetadata_id");
             entity.Property(e => e.TemplateId).HasColumnName("template_id");
 

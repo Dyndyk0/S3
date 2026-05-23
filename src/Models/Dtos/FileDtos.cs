@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace XPEHb.Models.Dtos;
 
 
-public record TagDto(int? KeyId, string? Key, int ValueId, string Value);
+public record TagDto(int? KeyId, string? Key, int? ValueId, string Value);
 public class FileDto {
     public int Id { get; set; }
     public string? Name { get; set; }
@@ -18,14 +18,19 @@ public class FileDto {
     public string? TagsRaw { get; set; } 
 }
 
-public record FileInitDto(string FileName, string FileExtension, List<int> ValueIds);
-public record FileUpdateDto(string FileName, string FileExtension, bool? UpdateFile, List<int>? ValueIds);
+public record FileInitDto(string FileName, string FileExtension, List<FileTagInitDto> Tags);
+public record FileTagInitDto(int KeyId, string Value);
+public record FileUpdateDto(string FileName, string FileExtension, bool? UpdateFile, List<FileTagInitDto>? Tags);
 public record TagFilterDto(int KeyId, string Value);
 public record FileFilterDto(
     int? Offset,
     int? Limit,
-    DateTime? DateFrom,
-    DateTime? DateTo,
+    string? FileName,
+    string? FileExtension,
+    DateTime? DateUploadFrom,
+    DateTime? DateUploadTo,
+    DateTime? LastUpdatedFrom,
+    DateTime? LastUpdatedTo,
     string? TagsJson,
     [FromQuery]
     int[]? TagIds,

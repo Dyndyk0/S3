@@ -1,6 +1,8 @@
 CREATE TABLE KeyMetadata (
     id SERIAL PRIMARY KEY,
-    name VARCHAR(255) NOT NULL
+    name VARCHAR(255) NOT NULL,
+    data_type VARCHAR(50) NOT NULL DEFAULT 'text',
+    CONSTRAINT chk_metadata_type CHECK (data_type IN ('text', 'number', 'boolean', 'date', 'select'))
 );
 
 CREATE TABLE File (
@@ -10,8 +12,8 @@ CREATE TABLE File (
     link VARCHAR(255) NOT NULL,
     date_upload TIMESTAMP,
     last_updated TIMESTAMP,
-    is_uploaded BOOLEAN NOT NULL,
-    is_deleted BOOLEAN NOT NULL
+    is_uploaded BOOLEAN NOT NULL DEFAULT false,
+    is_deleted BOOLEAN NOT NULL DEFAULT false
 );
 
 CREATE TABLE Template (

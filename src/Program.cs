@@ -1,6 +1,7 @@
 using Minio;
 using Microsoft.EntityFrameworkCore;
 using XPEHb.Services;
+using Swashbuckle.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,12 +12,18 @@ builder.Services.AddDbContext<XPEHb.Models.Entities.MetaContext>(options => opti
 builder.Services.AddMinio(options => {
     options.WithEndpoint(minioEndpoint);
     options.WithCredentials(Environment.GetEnvironmentVariable("MINIO_USER"), Environment.GetEnvironmentVariable("MINIO_PASSWORD"));
-    options.WithCredentials(Environment.GetEnvironmentVariable("ACCESS_KEY"), Environment.GetEnvironmentVariable("SECRET_KEY"));
+    //options.WithCredentials(Environment.GetEnvironmentVariable("ACCESS_KEY"), Environment.GetEnvironmentVariable("SECRET_KEY"));
     options.WithSSL(false);
 });
 
 builder.Services.AddScoped<MinioService>();
-builder.Services.AddScoped<DbService>();
+builder.Services.AddScoped<TemplateService>();
+builder.Services.AddScoped<ValueMetadataService>();
+builder.Services.AddScoped<KeyMetadataService>();
+builder.Services.AddScoped<FileService>();
+
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
@@ -47,6 +54,9 @@ app.MapMinioEndpoints();
 
 app.UseDefaultFiles();
 app.UseStaticFiles();
+
+app.UseSwagger();
+app.UseSwaggerUI();
 
 app.MapFallbackToFile("index.html");
 
