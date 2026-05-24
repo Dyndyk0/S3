@@ -13,7 +13,7 @@ public class KeyMetadataService
     }
 
     // KeyMetadata
-    public async Task<IEnumerable<KeyMetadataDto>> GetKeysMetadataAsync(KeyMetadataFilterDto filter)
+    public async Task<(IEnumerable<KeyMetadataDto> Keys, int Total)> GetKeysMetadataAsync(KeyMetadataFilterDto filter)
     {
         var query = _db.Keymetadata.AsQueryable();
 
@@ -28,7 +28,7 @@ public class KeyMetadataService
             string pattern = $"%{filter.DataType}%";
             query = query.Where(k => k.DataType != null && EF.Functions.Like(k.DataType, pattern));
         }
-
+        var total = await query.CountAsync();
         var keys = await query
             .OrderBy(k => k.Id)
             .Skip(filter.Offset ?? 0)
@@ -40,7 +40,7 @@ public class KeyMetadataService
             ))
             .ToListAsync();
 
-        return keys;
+        return (keys, total);
     }
     
     public async Task CreateKeyMetadataAsync(string name, MetadataType dataType)

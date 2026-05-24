@@ -9,11 +9,11 @@ public static class FileEndpoints
 
         // GET /file
         group.MapGet("/file", async ([AsParameters] FileFilterDto filter, FileService db) => {
-            var files = await db.GetFilesAsync(filter);
-            return Results.Ok(files);
+            var (files, total) = await db.GetFilesAsync(filter);
+            return Results.Ok(new { files, total });
         });
         
-        // GET /file
+        // GET /file/{id}
         group.MapGet("/file/{id}", async (int id, MinioService storage, FileService db, HttpContext context) => {
             string? fileLink = await db.GetLinkByIdAsync(id);
             string? fileName = await db.GetFileNameWithFileExtensionByIdAsync(id);
@@ -35,7 +35,7 @@ public static class FileEndpoints
 
         // POST /file
         group.MapPost("/file", async (FileInitDto req, MinioService storage, FileService db, HttpContext context) => {
-            (int id,string link) = await db.InitFileMetadataAsync(req.FileName, req.FileExtension, req.Tags);
+            (int id,string link) = await db.InitFileMetadataAsync(req.TemplateId, req.FileName, req.FileExtension, req.Tags);
 
             context.Items["LogFileName"] = link;
 
@@ -43,9 +43,9 @@ public static class FileEndpoints
             return Results.Ok(new { id, uploadUrl = minioPutUrl });
         });
 
-        // PUT /file/{fileId}
+        // PUT /file/{id}
         group.MapPut("/file/{id}", async (int id, FileUpdateDto req, MinioService storage, FileService db, HttpContext context) => {
-            var (fileId, link) = await db.UpdateFileAsync(id, req.Tags, req.FileName, req.FileExtension);
+            var (fileId, link) = await db.UpdateFileAsync(id, req.TemplateId, req.Tags, req.FileName, req.FileExtension);
             if (fileId == 0) return Results.NotFound($"The file with ID {id} was not found");
             
             context.Items["LogFileName"] = link;
@@ -61,7 +61,7 @@ public static class FileEndpoints
             }
         });
 
-        // DELETE /file/{fileId}
+        // DELETE /file/{id}
         group.MapDelete("/file/{id}", async (int id, MinioService storage, FileService db, HttpContext context) => {
             string? fileLink = await db.GetLinkByIdAsync(id);
             if (fileLink is null) return Results.NotFound($"The file with ID {id} was not found");

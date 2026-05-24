@@ -13,7 +13,7 @@ public class ValueMetadataService
     }
     
     // ValueMetadata
-    public async Task<IEnumerable<ValueMetadataDto>> GetValueMetadataAsync(ValueMetadataFilterDto filter)
+    public async Task<(IEnumerable<ValueMetadataDto> Values, int Total)> GetValueMetadataAsync(ValueMetadataFilterDto filter)
     {
         var query = _db.Valuemetadata.AsQueryable();
 
@@ -25,7 +25,7 @@ public class ValueMetadataService
             string pattern = $"%{filter.Name}%";
             query = query.Where(v => v.Name != null && EF.Functions.Like(v.Name, pattern));
         }
-
+        var total = await query.CountAsync();
         var values = await query
             .OrderBy(v => v.Id)
             .Skip(filter.Offset ?? 0)
@@ -37,7 +37,7 @@ public class ValueMetadataService
             ))
             .ToListAsync();
 
-        return values;
+        return (values, total);
     }
 
     public async Task CreateValueMetadataAsync(int keyMetadataId, string name)

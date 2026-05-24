@@ -18,9 +18,9 @@ public class FileDto {
     public string? TagsRaw { get; set; } 
 }
 
-public record FileInitDto(string FileName, string FileExtension, List<FileTagInitDto> Tags);
+public record FileInitDto(int TemplateId, string FileName, string FileExtension, List<FileTagInitDto> Tags);
 public record FileTagInitDto(int KeyId, string Value);
-public record FileUpdateDto(string FileName, string FileExtension, bool? UpdateFile, List<FileTagInitDto>? Tags);
+public record FileUpdateDto(int TemplateId, string FileName, string FileExtension, bool? UpdateFile, List<FileTagInitDto>? Tags);
 public record TagFilterDto(int KeyId, string Value);
 public record FileFilterDto(
     int? Offset,

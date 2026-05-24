@@ -1,7 +1,6 @@
 using Minio;
 using Microsoft.EntityFrameworkCore;
 using XPEHb.Services;
-using Swashbuckle.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 

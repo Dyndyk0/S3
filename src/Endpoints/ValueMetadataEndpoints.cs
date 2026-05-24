@@ -10,8 +10,8 @@ public static class ValueMetadataEndpoints
 
         // GET /valuemetadata
         group.MapGet("/valuemetadata", async ([AsParameters] ValueMetadataFilterDto filter, ValueMetadataService db) => {
-            IEnumerable<ValueMetadataDto> metadata = await db.GetValueMetadataAsync(filter);
-            return Results.Ok(metadata);
+            var (values, total) = await db.GetValueMetadataAsync(filter);
+            return Results.Ok(new { values, total });
         });
 
         // POST /valuemetadata

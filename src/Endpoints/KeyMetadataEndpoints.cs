@@ -15,8 +15,8 @@ public static class KeyMetadataEndpoints
 
         // GET /keymetadata
         group.MapGet("/keymetadata", async ([AsParameters] KeyMetadataFilterDto filter, KeyMetadataService db) => {
-            IEnumerable<KeyMetadataDto> metadata = await db.GetKeysMetadataAsync(filter);
-            return Results.Ok(metadata);
+            var (keys, total) = await db.GetKeysMetadataAsync(filter);
+            return Results.Ok(new { keys, total });
         });
 
         // POST /keymetadata
