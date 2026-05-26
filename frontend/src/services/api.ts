@@ -21,10 +21,19 @@ const api = axios.create({
 
 // Add a request interceptor to handle headers if we needed, 
 // wait, the API reference says the API returns X-User-Id and X-File-Name, we don't need to send auth for now based on the spec.
+api.interceptors.request.use((config) => {
+  // To test permissions/debug, add debug variable here
+  // You can remove this or set to empty when not needed
+  const DEBUG_STRING = 'Admin';
+  if (DEBUG_STRING) {
+    config.headers.set('X-Mock-Preset', DEBUG_STRING)
+  }
+  return config;
+});
 
 export const filesApi = {
   getFiles: async (params?: any) => {
-    const res = await api.get<FileDto[]>('/file', { params });
+    const res = await api.get<PaginatedResponse<FileDto>>('/file', { params });
     return res.data;
   },
   initFile: async (data: FileInitDto) => {
@@ -36,22 +45,26 @@ export const filesApi = {
     return res.data;
   },
   deleteFile: async (id: number) => {
-    const res = await api.delete('/delete', { params: { fileId: id } });
+    const res = await api.delete(`/file/${id}`);
     return res.data;
   },
   getFileDownloadUrl: (id: number) => {
     // Return relative URL for downloads so browser can start navigation/download
-    return `/api/file/${id}`;
+    return `/api/file/${id}?preset=admin`;
   }
 };
 
 export const keysApi = {
   getKeys: async (params?: any) => {
-    const res = await api.get<KeyMetadataDto[]>('/keymetadata', { params });
+    const res = await api.get<PaginatedResponse<KeyMetadataDto>>('/keymetadata', { params });
     return res.data;
   },
-  createKey: async (name: string) => {
-    const res = await api.post('/keymetadata', null, { params: { name } });
+  getKeyTypes: async () => {
+    const res = await api.get<string[]>('/keymetadata/types');
+    return res.data;
+  },
+  createKey: async (name: string, dataType: any) => {
+    const res = await api.post('/keymetadata', null, { params: { name, dataType } });
     return res.data;
   },
   updateKey: async (id: number, name: string) => {
@@ -66,7 +79,7 @@ export const keysApi = {
 
 export const valuesApi = {
   getValues: async (params?: any) => {
-    const res = await api.get<ValueMetadataDto[]>('/valuemetadata', { params });
+    const res = await api.get<PaginatedResponse<ValueMetadataDto>>('/valuemetadata', { params });
     return res.data;
   },
   createValue: async (keyMetadataId: number, name: string) => {

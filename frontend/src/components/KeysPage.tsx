@@ -5,35 +5,61 @@ import { Button } from './ui/Button';
 import { Trash2, Plus, Key as KeyIcon, Search, Edit } from 'lucide-react';
 import { Modal } from './ui/Modal';
 import { Input } from './ui/Input';
+import { Select } from './ui/Select';
 
 export function KeysPage() {
   const [keys, setKeys] = useState<KeyMetadataDto[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [keyTypes, setKeyTypes] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchName, setSearchName] = useState('');
+  const [searchDataType, setSearchDataType] = useState('');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [newKeyName, setNewKeyName] = useState('');
+  const [newKeyType, setNewKeyType] = useState<any>('');
 
   const fetchKeys = async (currentPage = page) => {
     try {
       setLoading(true);
       const params: any = { Offset: (currentPage - 1) * pageSize, Limit: pageSize };
       if (searchName.trim()) params.Name = searchName.trim();
+      if (searchDataType) params.DataType = searchDataType;
       const data = await keysApi.getKeys(params);
-      setKeys(Array.isArray(data) ? data : []);
+      if (data && data.items) {
+        setKeys(data.items);
+        setTotalCount(data.total || 0);
+      } else if (Array.isArray(data)) {
+        setKeys(data);
+        setTotalCount(data.length);
+      } else {
+        setKeys([]);
+        setTotalCount(0);
+      }
     } catch (e) {
       console.error(e);
       setKeys([]);
+      setTotalCount(0);
     } finally {
       setLoading(false);
     }
   };
 
+  const fetchKeyTypes = async () => {
+    try {
+      const types = await keysApi.getKeyTypes();
+      setKeyTypes(Array.isArray(types) ? types.map(String) : ['text', 'number', 'boolean', 'date', 'select']);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   useEffect(() => {
     fetchKeys();
+    fetchKeyTypes();
   }, []);
 
   const handleSearch = (e: React.FormEvent) => {
@@ -57,6 +83,7 @@ export function KeysPage() {
     setIsEditMode(false);
     setEditingId(null);
     setNewKeyName('');
+    setNewKeyType(keyTypes[0] || 'text');
     setIsModalOpen(true);
   };
 
@@ -73,7 +100,7 @@ export function KeysPage() {
       if (isEditMode && editingId) {
         await keysApi.updateKey(editingId, newKeyName);
       } else {
-        await keysApi.createKey(newKeyName);
+        await keysApi.createKey(newKeyName, newKeyType);
       }
       setIsModalOpen(false);
       setNewKeyName('');
@@ -95,7 +122,7 @@ export function KeysPage() {
         </Button>
       </div>
 
-      <form onSubmit={handleSearch} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex gap-4 items-center">
+      <form onSubmit={handleSearch} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row gap-4 sm:items-center">
         <div className="flex-1 relative">
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <Input 
@@ -105,7 +132,15 @@ export function KeysPage() {
             onChange={e => setSearchName(e.target.value)}
           />
         </div>
-        <Button type="submit">Найти</Button>
+        <div className="w-full sm:w-48">
+          <Select value={searchDataType} onChange={e => setSearchDataType(e.target.value)}>
+            <option value="">Все типы</option>
+            {keyTypes.map((t, idx) => (
+              <option key={idx} value={t}>{t}</option>
+            ))}
+          </Select>
+        </div>
+        <Button type="submit" className="w-full sm:w-auto">Найти</Button>
       </form>
 
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
@@ -117,6 +152,7 @@ export function KeysPage() {
               <tr className="bg-slate-50 border-b border-slate-200">
                 <th className="px-6 py-4 font-medium text-slate-600 text-sm w-24">ID</th>
                 <th className="px-6 py-4 font-medium text-slate-600 text-sm">Название ключа</th>
+                <th className="px-6 py-4 font-medium text-slate-600 text-sm">Тип данных</th>
                 <th className="px-6 py-4 font-medium text-slate-600 text-sm text-right w-32">Действия</th>
               </tr>
             </thead>
@@ -125,6 +161,7 @@ export function KeysPage() {
                 <tr key={key.id} className="hover:bg-slate-50 transition-colors">
                   <td className="px-6 py-4 text-sm text-slate-500">{key.id}</td>
                   <td className="px-6 py-4 text-sm font-medium text-slate-900">{key.name}</td>
+                  <td className="px-6 py-4 text-sm text-slate-500">{key.dataType || '—'}</td>
                   <td className="px-6 py-4 text-right">
                     <Button variant="ghost" size="icon" className="text-slate-500 hover:text-slate-800 hover:bg-slate-100" onClick={() => openEditModal(key)}>
                       <Edit className="w-4 h-4" />
@@ -137,7 +174,7 @@ export function KeysPage() {
               ))}
               {keys.length === 0 && (
                 <tr>
-                  <td colSpan={3} className="px-6 py-12 text-center text-slate-500">
+                  <td colSpan={4} className="px-6 py-12 text-center text-slate-500">
                     <KeyIcon className="w-12 h-12 text-slate-300 mx-auto mb-4" />
                     <p>Нет ключей для отображения</p>
                   </td>
@@ -150,7 +187,7 @@ export function KeysPage() {
         {!loading && (keys.length > 0 || page > 1) && (
           <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-between bg-white">
             <div className="text-sm text-slate-500">
-              Страница {page}
+              Страница {page} (Всего: {totalCount})
             </div>
             <div className="flex gap-2">
               <Button 
@@ -196,6 +233,16 @@ export function KeysPage() {
               placeholder="Например: Категория, Проект, Год..." 
             />
           </div>
+          {!isEditMode && (
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-700">Тип данных</label>
+              <Select value={newKeyType} onChange={e => setNewKeyType(e.target.value)}>
+                {keyTypes.map((t, idx) => (
+                  <option key={idx} value={t}>{t}</option>
+                ))}
+              </Select>
+            </div>
+          )}
         </div>
       </Modal>
     </div>

@@ -23,12 +23,12 @@ export function TemplatesPage() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [newTemplateName, setNewTemplateName] = useState('');
-  const [newKeyIds, setNewKeyIds] = useState<(number | '')[]>(['']);
+  const [newKeyIds, setNewKeyIds] = useState<{keyId: number | '', isRequired: boolean, isMultiple: boolean}[]>([{ keyId: '', isRequired: false, isMultiple: false }]);
 
   const fetchData = async () => {
     try {
-      const keysData = await keysApi.getKeys();
-      setKeys(Array.isArray(keysData) ? keysData : []);
+      const keysData = await keysApi.getKeys({ Limit: 1000 });
+      setKeys(keysData && (keysData as any).items ? (keysData as any).items : Array.isArray(keysData) ? keysData : []);
       await fetchTemplates(page, searchName);
     } catch (e) {
       console.error(e);
@@ -80,7 +80,7 @@ export function TemplatesPage() {
     setIsEditMode(false);
     setEditingId(null);
     setNewTemplateName('');
-    setNewKeyIds(['']);
+    setNewKeyIds([{ keyId: '', isRequired: false, isMultiple: false }]);
     setIsModalOpen(true);
   };
 
@@ -93,15 +93,23 @@ export function TemplatesPage() {
     try {
       const detail: any = await templatesApi.getTemplate(template.id);
       if (detail && detail.fields && detail.fields.length > 0) {
-        setNewKeyIds(detail.fields.map((f: any) => f.keyId));
+        setNewKeyIds(detail.fields.map((f: any) => ({
+          keyId: f.keyId,
+          isRequired: f.isRequired || false,
+          isMultiple: f.isMultiple || false
+        })));
       } else if (detail && detail.keyIds && detail.keyIds.length > 0) {
-        setNewKeyIds(detail.keyIds);
+        setNewKeyIds(detail.keyIds.map((id: number) => ({
+          keyId: id,
+          isRequired: false,
+          isMultiple: false
+        })));
       } else {
-        setNewKeyIds(['']);
+        setNewKeyIds([{ keyId: '', isRequired: false, isMultiple: false }]);
       }
     } catch (e) {
       console.error("Failed to load template details", e);
-      setNewKeyIds(['']);
+      setNewKeyIds([{ keyId: '', isRequired: false, isMultiple: false }]);
     }
     
     setIsModalOpen(true);
@@ -109,15 +117,15 @@ export function TemplatesPage() {
 
   const handleSave = async () => {
     if (!newTemplateName.trim()) return;
-    const validKeys = newKeyIds.filter((k): k is number => typeof k === 'number' && !isNaN(k));
+    const validKeys = newKeyIds.filter((k): k is {keyId: number, isRequired: boolean, isMultiple: boolean} => typeof k.keyId === 'number' && !isNaN(k.keyId)) as {keyId: number, isRequired: boolean, isMultiple: boolean}[];
     
     try {
       if (validKeys.length === 0) return; // Prevent empty template according to API
       
       if (isEditMode && editingId) {
-        await templatesApi.updateTemplate(editingId, { name: newTemplateName, keyIds: validKeys });
+        await templatesApi.updateTemplate(editingId, { name: newTemplateName, keys: validKeys });
       } else {
-        await templatesApi.createTemplate({ name: newTemplateName, keyIds: validKeys });
+        await templatesApi.createTemplate({ name: newTemplateName, keys: validKeys });
       }
       
       setIsModalOpen(false);
@@ -128,7 +136,7 @@ export function TemplatesPage() {
   };
 
   const handleAddKeySelect = () => {
-    setNewKeyIds([...newKeyIds, '']);
+    setNewKeyIds([...newKeyIds, { keyId: '', isRequired: false, isMultiple: false }]);
   };
 
   const handleRemoveKeySelect = (index: number) => {
@@ -139,7 +147,13 @@ export function TemplatesPage() {
 
   const handleKeySelectChange = (index: number, val: string) => {
     const updated = [...newKeyIds];
-    updated[index] = val ? parseInt(val, 10) : '';
+    updated[index].keyId = val ? parseInt(val, 10) : '';
+    setNewKeyIds(updated);
+  };
+
+  const handleKeyCheckboxChange = (index: number, field: 'isRequired' | 'isMultiple', value: boolean) => {
+    const updated = [...newKeyIds];
+    updated[index][field] = value;
     setNewKeyIds(updated);
   };
 
@@ -247,7 +261,7 @@ export function TemplatesPage() {
         isOpen={isModalOpen} 
         onClose={() => setIsModalOpen(false)} 
         title={isEditMode ? "Редактировать шаблон" : "Новый шаблон"}
-        footer={<Button onClick={handleSave} disabled={!newTemplateName.trim() || newKeyIds.filter(k => k !== '').length === 0}>Сохранить</Button>}
+        footer={<Button onClick={handleSave} disabled={!newTemplateName.trim() || newKeyIds.filter(k => k.keyId !== '').length === 0}>Сохранить</Button>}
       >
         <div className="space-y-4">
           <div className="space-y-2">
@@ -263,25 +277,37 @@ export function TemplatesPage() {
             <div className="flex items-center justify-between mb-2">
               <label className="text-sm font-medium text-slate-700">Ключи метаданных шаблона</label>
             </div>
-            {newKeyIds.map((keyId, index) => (
-              <div key={index} className="flex gap-2 items-center mb-2">
-                <Select 
-                  value={keyId} 
-                  onChange={e => handleKeySelectChange(index, e.target.value)}
-                >
-                  <option value="">Выберите ключ...</option>
-                  {keys.map(k => (
-                    <option key={k.id} value={k.id}>{k.name}</option>
-                  ))}
-                </Select>
-                <Button 
-                  variant="outline" 
-                  size="icon" 
-                  className="flex-shrink-0 text-slate-500 hover:border-red-200 hover:bg-red-50 hover:text-red-600"
-                  onClick={() => handleRemoveKeySelect(index)}
-                >
-                  <X className="w-4 h-4" />
-                </Button>
+            {newKeyIds.map((item, index) => (
+              <div key={index} className="flex gap-2 items-start mb-2 flex-col sm:flex-row bg-slate-50 p-2 rounded-md border border-slate-100">
+                <div className="w-full sm:w-1/2">
+                  <Select 
+                    value={item.keyId} 
+                    onChange={e => handleKeySelectChange(index, e.target.value)}
+                  >
+                    <option value="">Выберите ключ...</option>
+                    {keys.map(k => (
+                      <option key={k.id} value={k.id}>{k.name}</option>
+                    ))}
+                  </Select>
+                </div>
+                <div className="flex flex-1 gap-4 items-center pl-2 pt-1 sm:pt-0">
+                  <label className="flex items-center gap-2 cursor-pointer text-sm">
+                    <input type="checkbox" checked={item.isRequired} onChange={e => handleKeyCheckboxChange(index, 'isRequired', e.target.checked)} className="rounded text-indigo-600 focus:ring-indigo-500" />
+                    <span>Обязательно</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer text-sm">
+                    <input type="checkbox" checked={item.isMultiple} onChange={e => handleKeyCheckboxChange(index, 'isMultiple', e.target.checked)} className="rounded text-indigo-600 focus:ring-indigo-500" />
+                    <span>Множество</span>
+                  </label>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="flex-shrink-0 text-slate-400 hover:text-red-500 ml-auto h-8 w-8"
+                    onClick={() => handleRemoveKeySelect(index)}
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
             ))}
             

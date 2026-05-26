@@ -53,7 +53,7 @@ http {
 
         location /api/minio/ {
             limit_except PUT { deny all; }
-            client_max_body_size 500M; 
+            #client_max_body_size 500M; 
             proxy_set_header Authorization "";
             proxy_buffering off;
             proxy_request_buffering off;
@@ -61,7 +61,7 @@ http {
             proxy_set_header Content-Type "";
             proxy_set_header Origin "";
 
-            rewrite ^/minio(.*) $1 break;
+            rewrite ^/api/minio(.*) $1 break;
 
             proxy_pass $minio_url;
             

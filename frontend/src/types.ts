@@ -6,6 +6,7 @@ export interface PaginatedResponse<T> {
 export interface FileDto {
   id: number;
   name: string;
+  fileExtension?: string;
   lastUpdated?: string;
   dateUpload?: string;
   tags?: TagDto[];
@@ -18,22 +19,30 @@ export interface TagDto {
   value: string;
 }
 
+export interface FileTagInitDto {
+  keyId: number;
+  value: string;
+}
+
 export interface FileInitDto {
+  templateId?: number;
   fileName: string;
   fileExtension?: string;
-  valueIds: number[];
+  tags: FileTagInitDto[];
 }
 
 export interface FileUpdateDto {
+  templateId?: number;
   fileName?: string;
   fileExtension?: string;
   updateFile?: boolean;
-  valueIds?: number[];
+  tags?: FileTagInitDto[];
 }
 
 export interface KeyMetadataDto {
   id: number;
   name: string;
+  dataType?: number | string;
 }
 
 export interface ValueMetadataDto {
@@ -57,11 +66,19 @@ export interface TemplateFieldDto {
   keyId: number;
   keyName: string;
   values: ValueMetadataDto[];
+  isRequired?: boolean;
+  isMultiple?: boolean;
+}
+
+export interface TemplateKeyDto {
+  keyId: number;
+  isRequired: boolean;
+  isMultiple: boolean;
 }
 
 export interface CreateTemplateDto {
   name: string;
-  keyIds: number[];
+  keys: TemplateKeyDto[];
 }
 
 // For minio debug endpoint (assuming it returns an array of objects)

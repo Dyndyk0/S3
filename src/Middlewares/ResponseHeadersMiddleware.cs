@@ -13,8 +13,6 @@ public class ResponseHeadersMiddleware
     {
         context.Response.OnStarting(() =>
         {
-            // Берем имя пользователя из контекста (которое запишет MockAuthMiddleware)
-            // Если пользователя нет, оставляем заглушку
             string currentUserId = context.User?.Identity?.Name ?? "Zaglushka";
             context.Response.Headers["X-User-Id"] = currentUserId;
 

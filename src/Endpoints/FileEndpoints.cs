@@ -1,6 +1,8 @@
 using XPEHb.Services;
 using XPEHb.Models.Dtos;
 
+namespace XPEHb.Endpoints;
+
 public static class FileEndpoints
 {
     public static void MapFileEndpoints(this IEndpointRouteBuilder app, string minioEndpoint)
@@ -9,8 +11,8 @@ public static class FileEndpoints
 
         // GET /file
         group.MapGet("/file", async ([AsParameters] FileFilterDto filter, FileService db) => {
-            var (files, total) = await db.GetFilesAsync(filter);
-            return Results.Ok(new { files, total });
+            var (items, total) = await db.GetFilesAsync(filter);
+            return Results.Ok(new { items, total });
         });
         
         // GET /file/{id}
@@ -71,6 +73,6 @@ public static class FileEndpoints
             await storage.RemoveFileAsync(fileLink);
             await db.DeleteFileAsync(fileLink);
             return Results.Ok("Удалено");
-        });
+        }).RequireAuthorization("RequireAdmin");
     }
 }

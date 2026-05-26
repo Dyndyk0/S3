@@ -9,6 +9,7 @@ import { Select } from './ui/Select';
 
 export function ValuesPage() {
   const [values, setValues] = useState<ValueMetadataDto[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
   const [keys, setKeys] = useState<KeyMetadataDto[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -26,8 +27,14 @@ export function ValuesPage() {
 
   const fetchData = async () => {
     try {
-      const keysData = await keysApi.getKeys();
-      setKeys(Array.isArray(keysData) ? keysData : []);
+      const keysData = await keysApi.getKeys({ DataType: 'select', Limit: 1000 });
+      if (keysData && (keysData as any).items) {
+        setKeys((keysData as any).items);
+      } else if (Array.isArray(keysData)) {
+        setKeys(keysData);
+      } else {
+        setKeys([]);
+      }
       await fetchValues();
     } catch (e) {
       console.error(e);
@@ -42,10 +49,20 @@ export function ValuesPage() {
       if (searchKeyId) params.KeyId = parseInt(searchKeyId);
       
       const data = await valuesApi.getValues(params);
-      setValues(Array.isArray(data) ? data : []);
+      if (data && data.items) {
+        setValues(data.items);
+        setTotalCount(data.total || 0);
+      } else if (Array.isArray(data)) {
+        setValues(data);
+        setTotalCount(data.length);
+      } else {
+        setValues([]);
+        setTotalCount(0);
+      }
     } catch (e) {
       console.error(e);
       setValues([]);
+      setTotalCount(0);
     } finally {
       setLoading(false);
     }
@@ -195,7 +212,7 @@ export function ValuesPage() {
         {!loading && (values.length > 0 || page > 1) && (
           <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-between bg-white">
             <div className="text-sm text-slate-500">
-              Страница {page}
+              Страница {page} (Всего: {totalCount})
             </div>
             <div className="flex gap-2">
               <Button 

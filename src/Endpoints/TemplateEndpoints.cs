@@ -1,6 +1,8 @@
 using XPEHb.Services;
 using XPEHb.Models.Dtos;
 
+namespace XPEHb.Endpoints;
+
 public static class TemplateEndpoints
 {
     public static void MapTemplateEndpoints(this IEndpointRouteBuilder app)
@@ -28,7 +30,7 @@ public static class TemplateEndpoints
 
             var templateId = await db.CreateTemplateAsync(dto);
             return Results.Created($"/templates/{templateId}", new { id = templateId });
-        });
+        }).RequireAuthorization("RequireAdmin");
 
         // PUT /templates/{id}
         group.MapPut("/templates/{id}", async (int id, CreateTemplateDto dto, TemplateService db) => {
@@ -37,7 +39,7 @@ public static class TemplateEndpoints
                 return Results.NotFound(new { message = "Template not found" });
 
             return Results.Ok(new { id });
-        });
+        }).RequireAuthorization("RequireAdmin");
 
         // DELETE /templates/{id}
         group.MapDelete("/templates/{id}", async (int id, TemplateService db) => {
@@ -46,6 +48,6 @@ public static class TemplateEndpoints
                 return Results.NotFound(new { message = "Template not found" });
 
             return Results.Ok(new { message = "Template deleted" });
-        });
+        }).RequireAuthorization("RequireAdmin");
     }
 }

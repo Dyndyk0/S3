@@ -1,6 +1,8 @@
 using XPEHb.Services;
 using XPEHb.Models.Dtos;
 
+namespace XPEHb.Endpoints;
+
 public static class MinioEndpoints
 {
     public static void MapMinioEndpoints(this IEndpointRouteBuilder app)

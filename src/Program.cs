@@ -1,6 +1,11 @@
 using Minio;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.OpenApi;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authentication;
 using XPEHb.Services;
+using XPEHb.Middlewares;
+using XPEHb.Endpoints;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,42 +26,56 @@ builder.Services.AddScoped<ValueMetadataService>();
 builder.Services.AddScoped<KeyMetadataService>();
 builder.Services.AddScoped<FileService>();
 
+builder.Services.AddAuthentication("MockScheme").AddScheme<AuthenticationSchemeOptions, MockAuthHandler>("MockScheme", null);
+
+builder.Services.AddAuthorizationBuilder()
+    .AddPolicy("RequireAdmin", policy => policy.RequireRole("Admin"))
+    .AddPolicy("RequireUser", policy => policy.RequireRole("User"))
+    .AddPolicy("CanWrite", policy => policy.RequireClaim("Permission", "Write"))
+    .AddPolicy("CanRead", policy => policy.RequireClaim("Permission", "Read"))
+    .SetFallbackPolicy(new AuthorizationPolicyBuilder()
+        .RequireAuthenticatedUser()
+        .Build());
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-var app = builder.Build();
-
-// Глобальный перехватчик (для логов) (возможно, в будущем перенести в отдельный файл)
-app.Use(async (context, next) =>
+builder.Services.AddSwaggerGen(options =>
 {
-    context.Response.OnStarting(() =>
+    options.AddSecurityDefinition("MockPreset", new OpenApiSecurityScheme
     {
-        string currentUserId = "Zaglushka"; // Заглушка
-        context.Response.Headers["X-User-Id"] = currentUserId;
-
-        if (context.Items.TryGetValue("LogFileName", out var fileNameObj) && fileNameObj is string fileName)
-        {
-            context.Response.Headers["X-File-Name"] = Uri.EscapeDataString(fileName);
-        }
-
-        return Task.CompletedTask;
+        Description = "Введите пресет для тестирования прав: 'Admin', 'User'",
+        In = ParameterLocation.Header,
+        Name = "X-Mock-Preset",
+        Type = SecuritySchemeType.ApiKey,
+        Scheme = "ApiKeyScheme"
     });
 
-    await next(context);
+    options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
+    {
+        [new OpenApiSecuritySchemeReference("MockPreset", document)] = []
+    });
 });
+
+var app = builder.Build();
+
+
+app.UseDefaultFiles();
+app.UseStaticFiles();
+
+app.MapFallbackToFile("index.html").AllowAnonymous();
+
+app.UseSwagger(); // закинул сюда, чтобы не требовалось авторизации
+app.UseSwaggerUI();
+
+app.UseAuthentication(); // всё, что ниже, требует авторизации
+app.UseMiddleware<ResponseHeadersMiddleware>();
+app.UseAuthorization();
 
 app.MapFileEndpoints(minioEndpoint);
 app.MapTemplateEndpoints();
 app.MapKeyMetadataEndpoints();
 app.MapValueMetadataEndpoints();
 app.MapMinioEndpoints();
-
-app.UseDefaultFiles();
-app.UseStaticFiles();
-
-app.UseSwagger();
-app.UseSwaggerUI();
-
-app.MapFallbackToFile("index.html");
 
 app.Run();
