@@ -7,6 +7,8 @@ public partial class File
 {
     public int Id { get; set; }
 
+    public int? TemplateId { get; set; }
+
     public string Name { get; set; } = null!;
 
     public string FileExtension { get; set; } = null!;
@@ -22,4 +24,8 @@ public partial class File
     public bool IsDeleted { get; set; }
 
     public virtual ICollection<Metadata> Metadata { get; set; } = new List<Metadata>();
+
+    public virtual Template? Template { get; set; }
+
+    public virtual ICollection<Userfile> Userfiles { get; set; } = new List<Userfile>();
 }

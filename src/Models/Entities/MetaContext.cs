@@ -23,7 +23,13 @@ public partial class MetaContext : DbContext
 
     public virtual DbSet<Metadatatemplate> Metadatatemplates { get; set; }
 
+    public virtual DbSet<Role> Roles { get; set; }
+
     public virtual DbSet<Template> Templates { get; set; }
+
+    public virtual DbSet<User> Users { get; set; }
+
+    public virtual DbSet<Userfile> Userfiles { get; set; }
 
     public virtual DbSet<Valuemetadatum> Valuemetadata { get; set; }
 
@@ -56,6 +62,11 @@ public partial class MetaContext : DbContext
             entity.Property(e => e.Name)
                 .HasMaxLength(255)
                 .HasColumnName("name");
+            entity.Property(e => e.TemplateId).HasColumnName("template_id");
+
+            entity.HasOne(d => d.Template).WithMany(p => p.Files)
+                .HasForeignKey(d => d.TemplateId)
+                .HasConstraintName("file_template_id_fkey");
         });
 
         modelBuilder.Entity<Keymetadatum>(entity =>
@@ -131,6 +142,18 @@ public partial class MetaContext : DbContext
                 .HasConstraintName("metadatatemplate_template_id_fkey");
         });
 
+        modelBuilder.Entity<Role>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("role_pkey");
+
+            entity.ToTable("role");
+
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.Name)
+                .HasMaxLength(255)
+                .HasColumnName("name");
+        });
+
         modelBuilder.Entity<Template>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("template_pkey");
@@ -141,6 +164,37 @@ public partial class MetaContext : DbContext
             entity.Property(e => e.Name)
                 .HasMaxLength(255)
                 .HasColumnName("name");
+        });
+
+        modelBuilder.Entity<User>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("_user_pkey");
+
+            entity.ToTable("_user");
+
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.Login)
+                .HasMaxLength(255)
+                .HasColumnName("login");
+        });
+
+        modelBuilder.Entity<Userfile>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("userfile_pkey");
+
+            entity.ToTable("userfile");
+
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.FileId).HasColumnName("file_id");
+            entity.Property(e => e.UserId).HasColumnName("user_id");
+
+            entity.HasOne(d => d.File).WithMany(p => p.Userfiles)
+                .HasForeignKey(d => d.FileId)
+                .HasConstraintName("userfile_file_id_fkey");
+
+            entity.HasOne(d => d.User).WithMany(p => p.Userfiles)
+                .HasForeignKey(d => d.UserId)
+                .HasConstraintName("userfile_user_id_fkey");
         });
 
         modelBuilder.Entity<Valuemetadatum>(entity =>

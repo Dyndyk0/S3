@@ -26,13 +26,14 @@ builder.Services.AddScoped<ValueMetadataService>();
 builder.Services.AddScoped<KeyMetadataService>();
 builder.Services.AddScoped<FileService>();
 
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+builder.Services.AddProblemDetails();
+
 builder.Services.AddAuthentication("MockScheme").AddScheme<AuthenticationSchemeOptions, MockAuthHandler>("MockScheme", null);
 
 builder.Services.AddAuthorizationBuilder()
     .AddPolicy("RequireAdmin", policy => policy.RequireRole("Admin"))
     .AddPolicy("RequireUser", policy => policy.RequireRole("User"))
-    .AddPolicy("CanWrite", policy => policy.RequireClaim("Permission", "Write"))
-    .AddPolicy("CanRead", policy => policy.RequireClaim("Permission", "Read"))
     .SetFallbackPolicy(new AuthorizationPolicyBuilder()
         .RequireAuthenticatedUser()
         .Build());
@@ -59,7 +60,6 @@ builder.Services.AddSwaggerGen(options =>
 
 var app = builder.Build();
 
-
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
@@ -71,6 +71,8 @@ app.UseSwaggerUI();
 app.UseAuthentication(); // всё, что ниже, требует авторизации
 app.UseMiddleware<ResponseHeadersMiddleware>();
 app.UseAuthorization();
+
+app.UseExceptionHandler();
 
 app.MapFileEndpoints(minioEndpoint);
 app.MapTemplateEndpoints();

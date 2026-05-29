@@ -9,5 +9,7 @@ public partial class Template
 
     public string Name { get; set; } = null!;
 
+    public virtual ICollection<File> Files { get; set; } = new List<File>();
+
     public virtual ICollection<Metadatatemplate> Metadatatemplates { get; set; } = new List<Metadatatemplate>();
 }

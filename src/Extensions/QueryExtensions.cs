@@ -7,8 +7,8 @@ namespace XPEHb.Extensions;
 
 public static class QueryExtensions
 {
-    public static IQueryable<XPEHb.Models.Entities.File> ApplyMetadataFilters(
-        this IQueryable<XPEHb.Models.Entities.File> query, 
+    public static IQueryable<Models.Entities.File> ApplyMetadataFilters(
+        this IQueryable<Models.Entities.File> query, 
         List<TagFilterDto> tags, 
         Dictionary<int, string> keyTypes)
     {

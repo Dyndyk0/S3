@@ -7,6 +7,7 @@ namespace XPEHb.Models.Dtos;
 public record TagDto(int? KeyId, string? Key, int? ValueId, string Value);
 public class FileDto {
     public int Id { get; set; }
+    public int? TemplateId { get; set; }
     public string? Name { get; set; }
     public string? FileExtension { get; set; }
     [JsonIgnore]

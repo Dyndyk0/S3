@@ -16,26 +16,29 @@ CREATE TABLE MetadataTemplate (
     UNIQUE(keyMetadata_id, template_id)
 );
 
--- CREATE TABLE FileGroup (
---     id SERIAL PRIMARY KEY,
---     group_id INT,
---     file_id INT,
---     FOREIGN KEY (group_id) REFERENCES Group(id),
---     FOREIGN KEY (file_id) REFERENCES File(id)
--- );
+CREATE TABLE File (
+    id SERIAL PRIMARY KEY,
+    template_id INT,
+    name VARCHAR(255) NOT NULL,
+    file_extension VARCHAR(255) NOT NULL,
+    link VARCHAR(255) NOT NULL,
+    date_upload TIMESTAMP,
+    last_updated TIMESTAMP,
+    is_uploaded BOOLEAN NOT NULL DEFAULT false,
+    is_deleted BOOLEAN NOT NULL DEFAULT false,
+    FOREIGN KEY (template_id) REFERENCES Template(id)
+);
+
+CREATE TABLE UserRole (
+    id SERIAL PRIMARY KEY,
+    role VARCHAR(255),
+    user_id INT,
+    FOREIGN KEY (user_id) REFERENCES _User(id)
+);
 
 -- CREATE TABLE UserGroup (
 --     id SERIAL PRIMARY KEY,
 --     role VARCHAR(255),
---     user_id INT
---     --FOREIGN KEY (user_id) REFERENCES USER(id),
--- );
-
--- CREATE TABLE UserFile (
---     id SERIAL PRIMARY KEY,
---     role VARCHAR(255),
---     file_id INT,
 --     user_id INT,
---     FOREIGN KEY (file_id) REFERENCES File(id)
---     --FOREIGN KEY (user_id) REFERENCES USER(id),
+--     FOREIGN KEY (user_id) REFERENCES _User(id)
 -- );

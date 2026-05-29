@@ -54,6 +54,13 @@ export const filesApi = {
   }
 };
 
+export const authApi = {
+  register: async (data: any) => {
+    const res = await api.post(process.env.AUTH_URL || "", data);
+    return res.data;
+  }
+};
+
 export const keysApi = {
   getKeys: async (params?: any) => {
     const res = await api.get<PaginatedResponse<KeyMetadataDto>>('/keymetadata', { params });

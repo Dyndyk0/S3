@@ -5,18 +5,17 @@ CREATE TABLE KeyMetadata (
     CONSTRAINT chk_metadata_type CHECK (data_type IN ('text', 'number', 'boolean', 'date', 'select'))
 );
 
-CREATE TABLE File (
+CREATE TABLE Template (
     id SERIAL PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    file_extension VARCHAR(255) NOT NULL,
-    link VARCHAR(255) NOT NULL,
-    date_upload TIMESTAMP,
-    last_updated TIMESTAMP,
-    is_uploaded BOOLEAN NOT NULL DEFAULT false,
-    is_deleted BOOLEAN NOT NULL DEFAULT false
+    name VARCHAR(255) NOT NULL
 );
 
-CREATE TABLE Template (
+CREATE TABLE _User (
+    id SERIAL PRIMARY KEY,
+    login VARCHAR(255) NOT NULL
+);
+
+CREATE TABLE Role (
     id SERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL
 );

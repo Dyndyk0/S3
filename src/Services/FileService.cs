@@ -19,11 +19,11 @@ public class FileService
 
     public async Task<(IEnumerable<FileDto> Files, int Total)> GetFilesAsync(FileFilterDto filter)
     {
-        // 1. Изменили Includes. Теперь Keymetadata привязана напрямую к Metadata
         var query = _db.Files
             .Include(f => f.Metadata).ThenInclude(m => m.Keymetadata)
             .Include(f => f.Metadata).ThenInclude(m => m.Valuemetadata)
             //.Where(f => !f.IsDeleted && f.IsUploaded)
+            .Where(f => !f.IsDeleted && f.IsUploaded)
             .AsQueryable();
 
         if (filter.DateUploadFrom.HasValue)
@@ -47,7 +47,6 @@ public class FileService
                 .Where(k => tagIds.Contains(k.Id))
                 .ToDictionaryAsync(k => k.Id, k => k.DataType);
 
-            // Вся магия фильтрации теперь спрятана в одной строке!
             query = query.ApplyMetadataFilters(tags, keyTypes);
         }
 
@@ -74,10 +73,10 @@ public class FileService
             .Take(filter.Limit ?? 100)
             .ToListAsync();
 
-        
         var dtos = result.Select(f => new FileDto
         {
             Id = f.Id,
+            TemplateId = f.TemplateId,
             Name = f.Name,
             FileExtension = f.FileExtension,
             Link = f.Link,
@@ -128,6 +127,7 @@ public class FileService
 
         var file = new Models.Entities.File
         {
+            TemplateId = templateId,
             Name = fileName,
             FileExtension = fileExtension,
             Link = "temp_link",
@@ -184,7 +184,6 @@ public class FileService
 
         if (tags != null)
         {
-            // Сначала валидируем новые теги (если не пройдут - упадет Exception и старые теги не удалятся)
             var rulesDict = await ValidateAndGetTemplateRulesAsync(templateId, tags);
 
             _db.Metadata.RemoveRange(file.Metadata);
@@ -202,15 +201,15 @@ public class FileService
         return file != null ? $"{file.Name}.{file.FileExtension}" : null;
     }
 
-    private async Task<Dictionary<int, Metadatatemplate>?> ValidateAndGetTemplateRulesAsync(int? templateId, List<FileTagInitDto>? tags)
+    private async Task<Dictionary<int, Metadatatemplate>> ValidateAndGetTemplateRulesAsync(int? templateId, List<FileTagInitDto>? tags)
     {
         var templateRules = await _db.Metadatatemplates
             .Include(mt => mt.Keymetadata)
             .Where(mt => mt.TemplateId == templateId)
             .ToListAsync();
 
-        if (!templateRules.Any()) return null;
-            //throw new ArgumentException($"Шаблон с ID {templateId} не найден или не содержит тегов.");
+        if (!templateRules.Any())
+            throw new ValidationException($"Шаблон с ID {templateId} не найден или не содержит тегов.");
 
         var rulesDict = templateRules.ToDictionary(r => r.KeymetadataId, r => r);
 
@@ -218,15 +217,15 @@ public class FileService
         var validTags = tags?.Where(t => !string.IsNullOrWhiteSpace(t.Value)).ToList() ?? new List<FileTagInitDto>();
 
         var invalidKeys = validTags.Select(t => t.KeyId).Except(rulesDict.Keys).ToList();
-        if (invalidKeys.Any()) return null;
-            //throw new ArgumentException($"Ключи [{string.Join(", ", invalidKeys)}] не принадлежат шаблону.");
+        if (invalidKeys.Any()) 
+            throw new ValidationException($"Ключи [{string.Join(", ", invalidKeys)}] не принадлежат шаблону.");
 
         var groupedTags = validTags.GroupBy(t => t.KeyId);
         foreach (var group in groupedTags)
         {
             var rule = rulesDict[group.Key];
-            if (!rule.IsMultiple && group.Count() > 1) return null;
-                //throw new ArgumentException($"Тег '{rule.Keymetadata.Name}' не поддерживает множественные значения.");
+            if (!rule.IsMultiple && group.Count() > 1) 
+                throw new ValidationException($"Тег '{rule.Keymetadata.Name}' не поддерживает множественные значения.");
         }
 
         var incomingKeyIds = validTags.Select(t => t.KeyId).ToHashSet();
@@ -235,8 +234,8 @@ public class FileService
             .Select(r => r.Keymetadata.Name)
             .ToList();
 
-        if (missingRequired.Any()) return null;
-            //throw new ArgumentException($"Обязательные теги не заполнены: {string.Join(", ", missingRequired)}");
+        if (missingRequired.Any()) 
+            throw new ValidationException($"Обязательные теги не заполнены: {string.Join(", ", missingRequired)}");
 
         return rulesDict;
     }
@@ -259,7 +258,7 @@ public class FileService
             bool isParsed = MetadataHelper.TrySetValueFromString(metadata, rule.Keymetadata.DataType, tag.Value);
             
             if (!isParsed) 
-                throw new ArgumentException($"Значение '{tag.Value}' не подходит для тега '{rule.Keymetadata.Name}' (ожидается тип {rule.Keymetadata.DataType}).");
+                throw new ValidationException($"Значение '{tag.Value}' не подходит для тега '{rule.Keymetadata.Name}' (ожидается тип {rule.Keymetadata.DataType}).");
 
             _db.Metadata.Add(metadata);
         }

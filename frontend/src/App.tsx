@@ -12,6 +12,8 @@ import { KeysPage } from './components/KeysPage';
 import { ValuesPage } from './components/ValuesPage';
 import { MinioPage } from './components/MinioPage';
 
+import { AuthPage } from './components/AuthPage';
+
 export default function App() {
   return (
     <BrowserRouter>
@@ -22,6 +24,7 @@ export default function App() {
           <Route path="keys" element={<KeysPage />} />
           <Route path="values" element={<ValuesPage />} />
           <Route path="minio" element={<MinioPage />} />
+          <Route path="auth" element={<AuthPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>

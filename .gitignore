@@ -6,7 +6,7 @@ Properties/
 nginx.conf.template/
 nginx_logs/
 node_modules/
-frontend/.env.example
+frontend/src/utils/
 .env
 .git/
 XPEHb.sln

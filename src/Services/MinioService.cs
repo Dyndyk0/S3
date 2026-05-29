@@ -16,7 +16,7 @@ public class MinioService
         _bucket = bucket ?? throw new ArgumentNullException(nameof(bucket));
     }
 
-    // Уменьшить время жизни ссылки для загрузки
+    // Уменьшить время жизни ссылки для загрузки (или нет)
     public async Task<string> GetUploadUrlAsync(string fileName, string minioEndpoint)
     {
         var args = new PresignedPutObjectArgs()

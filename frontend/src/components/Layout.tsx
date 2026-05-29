@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
-import { FileText, LayoutTemplate, Key as KeyIcon, Tag, Database, Activity } from 'lucide-react';
+import { FileText, LayoutTemplate, Key as KeyIcon, Tag, Database, Activity, UserPlus } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 export function Layout() {
@@ -10,6 +10,7 @@ export function Layout() {
     { to: '/keys', label: 'Ключи', icon: KeyIcon },
     { to: '/values', label: 'Значения', icon: Tag },
     { to: '/minio', label: 'Файлы в MinIO', icon: Database },
+    { to: '/auth', label: 'Регистрация (Тест)', icon: UserPlus },
   ];
 
   return (
@@ -42,11 +43,11 @@ export function Layout() {
         </nav>
       </aside>
       <main className="flex-1 flex flex-col overflow-hidden hidden-scrollbar">
-        <header className="h-16 bg-white border-b border-slate-200 flex items-center px-8 shadow-sm flex-shrink-0 z-10">
+        <header className="h-16 bg-white border-b border-slate-200 flex items-center px-6 shadow-sm flex-shrink-0 z-10">
           <h1 className="text-xl font-semibold text-slate-800 tracking-tight">API Management Panel</h1>
         </header>
-        <div className="flex-1 overflow-y-auto p-8">
-          <div className="w-full">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+          <div className="w-full h-full">
              <Outlet />
           </div>
         </div>
