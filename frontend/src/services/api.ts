@@ -19,18 +19,6 @@ const api = axios.create({
   }
 });
 
-// Add a request interceptor to handle headers if we needed, 
-// wait, the API reference says the API returns X-User-Id and X-File-Name, we don't need to send auth for now based on the spec.
-api.interceptors.request.use((config) => {
-  // To test permissions/debug, add debug variable here
-  // You can remove this or set to empty when not needed
-  const DEBUG_STRING = 'Admin';
-  if (DEBUG_STRING) {
-    config.headers.set('X-Mock-Preset', DEBUG_STRING)
-  }
-  return config;
-});
-
 export const filesApi = {
   getFiles: async (params?: any) => {
     const res = await api.get<PaginatedResponse<FileDto>>('/file', { params });
@@ -50,13 +38,21 @@ export const filesApi = {
   },
   getFileDownloadUrl: (id: number) => {
     // Return relative URL for downloads so browser can start navigation/download
-    return `/api/file/${id}?preset=admin`;
+    return `/api/file/${id}`;
   }
 };
 
 export const authApi = {
-  register: async (data: any) => {
-    const res = await api.post(process.env.AUTH_URL || "", data);
+  login: async (data: any) => {
+    const res = await api.post('/login', data);
+    return res.data;
+  },
+  logout: async () => {
+    const res = await api.post('/logout');
+    return res.data;
+  },
+  getMe: async () => {
+    const res = await api.get('/user/me');
     return res.data;
   }
 };

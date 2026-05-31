@@ -1,9 +1,19 @@
 using Microsoft.AspNetCore.Diagnostics;
+// Обязательно добавьте этот using для логгера
+using Microsoft.Extensions.Logging; 
 
 namespace XPEHb.Services;
 
 public class GlobalExceptionHandler : IExceptionHandler
 {
+    private readonly ILogger<GlobalExceptionHandler> _logger;
+
+    // Внедряем логгер через конструктор
+    public GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger)
+    {
+        _logger = logger;
+    }
+
     public async ValueTask<bool> TryHandleAsync(
         HttpContext httpContext,
         Exception exception,
@@ -16,19 +26,21 @@ public class GlobalExceptionHandler : IExceptionHandler
             _ => (StatusCodes.Status500InternalServerError, "Внутренняя ошибка сервера")
         };
 
-        if (statusCode != StatusCodes.Status500InternalServerError)
+        if (statusCode == StatusCodes.Status500InternalServerError)
         {
-            httpContext.Response.StatusCode = statusCode;
-            
-            await httpContext.Response.WriteAsJsonAsync(new
-            {
-                Error = errorMessage,
-                StatusCode = statusCode
-            }, cancellationToken);
-
-            return true;
+            _logger.LogError(exception, "Произошла необработанная ошибка: {Message}", exception.Message);
         }
 
-        return false;
+        httpContext.Response.StatusCode = statusCode;
+        
+        await httpContext.Response.WriteAsJsonAsync(new
+        {
+            Error = errorMessage,
+            StatusCode = statusCode,
+            // Для удобства отладки можно временно возвращать текст системной ошибки в Postman
+            Details = exception.Message 
+        }, cancellationToken);
+
+        return true; 
     }
 }

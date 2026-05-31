@@ -38,6 +38,10 @@ export function FilesPage() {
   const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
   const [currentSelectedTagId, setCurrentSelectedTagId] = useState<string>('');
 
+  const [searchTemplateId, setSearchTemplateId] = useState<string>('');
+  const [visibleDeleted, setVisibleDeleted] = useState(false);
+  const [showTemplateName, setShowTemplateName] = useState(true);
+
   // Pagination for files
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -98,15 +102,17 @@ export function FilesPage() {
       const params: any = { Offset: (currentPage - 1) * pageSize, Limit: pageSize };
       
       // We apply standard filters
-      if (uploadDateFrom) params.DateUploadFrom = format(new Date(`${uploadDateFrom}T${uploadTimeFrom || '00:00'}:00`), "yyyy-MM-dd' 'HH:mm:ss.SSS");
-      if (uploadDateTo) params.DateUploadTo = format(new Date(`${uploadDateTo}T${uploadTimeTo || '23:59'}:59`), "yyyy-MM-dd' 'HH:mm:ss.SSS");
-      if (updatedDateFrom) params.LastUpdatedFrom = format(new Date(`${updatedDateFrom}T${updatedTimeFrom || '00:00'}:00`), "yyyy-MM-dd' 'HH:mm:ss.SSS");
-      if (updatedDateTo) params.LastUpdatedTo = format(new Date(`${updatedDateTo}T${updatedTimeTo || '23:59'}:59`), "yyyy-MM-dd' 'HH:mm:ss.SSS");
+      if (uploadDateFrom) params.DateUploadFrom = new Date(`${uploadDateFrom}T${uploadTimeFrom || '00:00'}:00`).toISOString();
+      if (uploadDateTo) params.DateUploadTo = new Date(`${uploadDateTo}T${uploadTimeTo || '23:59'}:59`).toISOString();
+      if (updatedDateFrom) params.LastUpdatedFrom = new Date(`${updatedDateFrom}T${updatedTimeFrom || '00:00'}:00`).toISOString();
+      if (updatedDateTo) params.LastUpdatedTo = new Date(`${updatedDateTo}T${updatedTimeTo || '23:59'}:59`).toISOString();
       
       if (currentSortBy) params.SortBy = currentSortBy.toLowerCase();
       params.SortDescending = currentSortDesc;
       if (searchName.trim()) params.FileName = searchName.trim();
       if (searchExt.trim()) params.FileExtension = searchExt.trim();
+      if (searchTemplateId) params.TemplateId = parseInt(searchTemplateId);
+      params.VisibleDeleted = visibleDeleted;
       
       if (tagSearches.length > 0) {
         params.TagsJson = JSON.stringify(tagSearches.map(val => ({ KeyId: val.keyId, Value: val.value })));
@@ -351,14 +357,16 @@ export function FilesPage() {
     const loadTemplate = async () => {
       if (!selectedTemplateId) {
         setTemplateDetails(null);
-        setSelectedValues({});
+        if (!editingFile) setSelectedValues({});
         return;
       }
       try {
         setLoadingTemplate(true);
         const data = await templatesApi.getTemplate(parseInt(selectedTemplateId));
         setTemplateDetails(data);
-        setSelectedValues({}); // reset
+        if (!editingFile || editingFile.templateId?.toString() !== selectedTemplateId) {
+           setSelectedValues({}); // reset
+        }
       } catch (e) {
         console.error(e);
       } finally {
@@ -418,7 +426,7 @@ export function FilesPage() {
       });
     }
     setSelectedValues(initVals);
-    setSelectedTemplateId('');
+    setSelectedTemplateId(file.templateId ? file.templateId.toString() : '');
     setIsEditModalOpen(true);
   };
 
@@ -578,6 +586,10 @@ export function FilesPage() {
       {isSettingsOpen && (
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-wrap gap-6 text-sm mb-4">
           <label className="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" checked={showTemplateName} onChange={e => setShowTemplateName(e.target.checked)} className="rounded text-indigo-600 focus:ring-indigo-500" />
+            <span className="text-slate-700">Показывать "Шаблон файла"</span>
+          </label>
+          <label className="flex items-center gap-2 cursor-pointer">
             <input type="checkbox" checked={showExtension} onChange={e => setShowExtension(e.target.checked)} className="rounded text-indigo-600 focus:ring-indigo-500" />
             <span className="text-slate-700">Показывать "Расширение"</span>
           </label>
@@ -616,6 +628,29 @@ export function FilesPage() {
               value={searchExt}
               onChange={e => setSearchExt(e.target.value)}
             />
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-slate-500">Поиск по шаблону</label>
+            <Select 
+              value={searchTemplateId}
+              onChange={e => setSearchTemplateId(e.target.value)}
+            >
+              <option value="">Любой</option>
+              {templates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+            </Select>
+          </div>
+
+          <div className="space-y-1 flex items-center pt-5">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input 
+                type="checkbox" 
+                checked={visibleDeleted} 
+                onChange={e => setVisibleDeleted(e.target.checked)} 
+                className="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4"
+              />
+              <span className="text-sm font-medium text-slate-700">Включая удаленные</span>
+            </label>
           </div>
 
           <div className="space-y-1 lg:col-span-2">
@@ -737,6 +772,11 @@ export function FilesPage() {
                   <th className="px-6 py-4 font-medium text-slate-600 text-sm cursor-pointer hover:bg-slate-100 transition-colors select-none group" onClick={() => applySort('name')}>
                     <span className="group-hover:text-indigo-600 transition-colors">Имя файла{renderSortIcon('name')}</span>
                   </th>
+                  {showTemplateName && (
+                    <th className="px-6 py-4 font-medium text-slate-600 text-sm cursor-pointer hover:bg-slate-100 transition-colors select-none group" onClick={() => applySort('templatename')}>
+                      <span className="group-hover:text-indigo-600 transition-colors">Шаблон{renderSortIcon('templatename')}</span>
+                    </th>
+                  )}
                   {showExtension && (
                     <th className="px-6 py-4 font-medium text-slate-600 text-sm">Расширение</th>
                   )}
@@ -759,6 +799,9 @@ export function FilesPage() {
                   <tr key={file.id} className="hover:bg-slate-50 transition-colors">
                     <td className="px-6 py-4 text-sm text-slate-500">{file.id}</td>
                     <td className="px-6 py-4 text-sm font-medium text-slate-900">{file.name}</td>
+                    {showTemplateName && (
+                      <td className="px-6 py-4 text-sm text-slate-500">{file.templateName || '—'}</td>
+                    )}
                     {showExtension && (
                       <td className="px-6 py-4 text-sm text-slate-500 uppercase">
                         {file.fileExtension || '—'}
@@ -801,7 +844,7 @@ export function FilesPage() {
                 ))}
                 {files.length === 0 && (
                   <tr>
-                    <td colSpan={((showExtension ? 1 : 0) + (showUpdateDate ? 1 : 0) + (showUploadDate ? 1 : 0) + 4)} className="px-6 py-12 text-center text-slate-500">
+                    <td colSpan={((showTemplateName ? 1 : 0) + (showExtension ? 1 : 0) + (showUpdateDate ? 1 : 0) + (showUploadDate ? 1 : 0) + 4)} className="px-6 py-12 text-center text-slate-500">
                       <FileUp className="w-12 h-12 text-slate-300 mx-auto mb-4" />
                       <p>По вашему запросу файлов не найдено</p>
                     </td>

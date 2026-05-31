@@ -5,9 +5,12 @@ namespace XPEHb.Models.Dtos;
 
 
 public record TagDto(int? KeyId, string? Key, int? ValueId, string Value);
-public class FileDto {
+public record FileDto {
     public int Id { get; set; }
     public int? TemplateId { get; set; }
+    public string? TemplateName { get; set; }
+    public string? Creator { get; set; }
+    public string? LastEditor { get; set; }
     public string? Name { get; set; }
     public string? FileExtension { get; set; }
     [JsonIgnore]
@@ -15,8 +18,8 @@ public class FileDto {
     public DateTime? DateUpload { get; set; }
     public DateTime? LastUpdated { get; set; }
     public List<TagDto> Tags { get; set; } = new();
-    [JsonIgnore]
-    public string? TagsRaw { get; set; } 
+    //[JsonIgnore]
+    //public string? TagsRaw { get; set; } 
 }
 
 public record FileInitDto(int? TemplateId, string FileName, string FileExtension, List<FileTagInitDto>? Tags);
@@ -26,6 +29,7 @@ public record TagFilterDto(int KeyId, string Value);
 public record FileFilterDto(
     int? Offset,
     int? Limit,
+    int? TemplateId,
     string? FileName,
     string? FileExtension,
     DateTime? DateUploadFrom,
@@ -36,5 +40,6 @@ public record FileFilterDto(
     [FromQuery]
     int[]? TagIds,
     string? SortBy,
-    bool SortDescending = true
+    bool SortDescending = true,
+    bool VisibleDeleted = false
 );

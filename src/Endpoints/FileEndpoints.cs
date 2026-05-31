@@ -1,5 +1,7 @@
+using System.Security.Claims;
 using XPEHb.Services;
 using XPEHb.Models.Dtos;
+
 
 namespace XPEHb.Endpoints;
 
@@ -36,8 +38,15 @@ public static class FileEndpoints
         });
 
         // POST /file
-        group.MapPost("/file", async (FileInitDto req, MinioService storage, FileService db, HttpContext context) => {
-            (int id,string link) = await db.InitFileMetadataAsync(req.TemplateId, req.FileName, req.FileExtension, req.Tags);
+        group.MapPost("/file", async (FileInitDto req,  ClaimsPrincipal user, MinioService storage, FileService db, HttpContext context) => {
+            var userIdClaim = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+    
+            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int currentUserId))
+            {
+                return Results.Unauthorized();
+            }
+
+            (int id,string link) = await db.InitFileMetadataAsync(req.TemplateId, currentUserId, req.FileName, req.FileExtension, req.Tags);
 
             context.Items["LogFileName"] = link;
 
@@ -46,21 +55,34 @@ public static class FileEndpoints
         });
 
         // PUT /file/{id}
-        group.MapPut("/file/{id}", async (int id, FileUpdateDto req, MinioService storage, FileService db, HttpContext context) => {
-            var (fileId, link) = await db.UpdateFileAsync(id, req.TemplateId, req.Tags, req.FileName, req.FileExtension);
-            if (fileId == 0) return Results.NotFound($"The file with ID {id} was not found");
-            
+        group.MapPut("/file/{id}", async (int id, FileUpdateDto req, ClaimsPrincipal user, MinioService storage, FileService db, HttpContext context) => {
+            var userIdClaim = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+    
+            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int currentUserId))
+            {
+                return Results.Unauthorized();
+            }
+
+            var (fileId, link) = await db.UpdateFileAsync(id, currentUserId, req.TemplateId, req.Tags, req.FileName, req.FileExtension);
+            if (fileId == 0) return Results.NotFound($"The file with ID {id} was not found or mark for deletion");
+
             context.Items["LogFileName"] = link;
 
-            if (req.UpdateFile.GetValueOrDefault(false))
-            {
-                string minioPutUrl = await storage.GetUploadUrlAsync(link, minioEndpoint);
-                return Results.Ok(new { id, uploadUrl = minioPutUrl });
-            }
-            else
+            if (!req.UpdateFile.GetValueOrDefault(false))
             {
                 return Results.Ok(id); // Зачем я возвращаю id?
             }
+
+            string minioPutUrl = await storage.GetUploadUrlAsync(link, minioEndpoint);
+            return Results.Ok(new { id, uploadUrl = minioPutUrl });
+        });
+    
+        // PATCH /file/{id}
+        group.MapPatch("/file/{id}", async (int id, MinioService storage, FileService db, HttpContext context) => {
+            string? fileLink = await db.MarkForDeletionAsync(id);
+            if (fileLink is null) return Results.NotFound($"The file with ID {id} was not found or already marked for deletion");
+            context.Items["LogFileName"] = fileLink;
+            return Results.Ok();
         });
 
         // DELETE /file/{id}
@@ -72,7 +94,8 @@ public static class FileEndpoints
 
             await storage.RemoveFileAsync(fileLink);
             await db.DeleteFileAsync(fileLink);
-            return Results.Ok("Удалено");
-        }).RequireAuthorization("RequireAdmin");
+            return Results.Ok();
+        })
+        .RequireAuthorization("RequireAdmin");
     }
 }

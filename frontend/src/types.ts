@@ -6,6 +6,8 @@ export interface PaginatedResponse<T> {
 export interface FileDto {
   id: number;
   name: string;
+  templateId?: number;
+  templateName?: string;
   fileExtension?: string;
   lastUpdated?: string;
   dateUpload?: string;

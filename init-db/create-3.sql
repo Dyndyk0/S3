@@ -14,6 +14,10 @@ CREATE TABLE Metadata (
     FOREIGN KEY (valueMetadata_id) REFERENCES ValueMetadata(id)
 );
 
+INSERT INTO _Role (name) VALUES
+('admin'),
+('user');
+
 -- CREATE TABLE UserFile (
 --     id SERIAL PRIMARY KEY,
 --     --rights VARCHAR(255),

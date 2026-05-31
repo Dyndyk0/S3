@@ -1,3 +1,5 @@
+using System.Security.Claims;
+
 namespace XPEHb.Middlewares;
 
 public class ResponseHeadersMiddleware
@@ -13,8 +15,8 @@ public class ResponseHeadersMiddleware
     {
         context.Response.OnStarting(() =>
         {
-            string currentUserId = context.User?.Identity?.Name ?? "Zaglushka";
-            context.Response.Headers["X-User-Id"] = currentUserId;
+            string currentUserId = context.User.Identity?.Name ?? "-";
+            context.Response.Headers["X-User-Id"] = Uri.EscapeDataString(currentUserId);
 
             if (context.Items.TryGetValue("LogFileName", out var fileNameObj) && fileNameObj is string fileName)
             {

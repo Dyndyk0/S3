@@ -22,7 +22,10 @@ public class FileService
         var query = _db.Files
             .Include(f => f.Metadata).ThenInclude(m => m.Keymetadata)
             .Include(f => f.Metadata).ThenInclude(m => m.Valuemetadata)
-            //.Where(f => !f.IsDeleted && f.IsUploaded)
+            .Include(f => f.Creator)
+            .Include(f => f.LastEditor)
+            .Where(f => f.IsDeleted == filter.VisibleDeleted)
+            //.Where(f => f.IsUploaded)
             .Where(f => !f.IsDeleted && f.IsUploaded)
             .AsQueryable();
 
@@ -38,6 +41,8 @@ public class FileService
             query = query.Where(f => EF.Functions.ILike(f.Name, $"%{filter.FileName}%"));
         if (!string.IsNullOrWhiteSpace(filter.FileExtension))
             query = query.Where(f => EF.Functions.ILike(f.FileExtension, $"%{filter.FileExtension}%"));
+        if (filter.TemplateId.HasValue)
+            query = query.Where(f => f.TemplateId == filter.TemplateId.Value);
 
         var tags = ParseTagsFromJson(filter.TagsJson);
         if (tags != null && tags.Any())
@@ -77,6 +82,8 @@ public class FileService
         {
             Id = f.Id,
             TemplateId = f.TemplateId,
+            Creator = f.Creator.Name,
+            LastEditor = f.LastEditor.Name,
             Name = f.Name,
             FileExtension = f.FileExtension,
             Link = f.Link,
@@ -121,14 +128,16 @@ public class FileService
         return file?.Link;
     }
 
-    public async Task<(int id, string link)> InitFileMetadataAsync(int? templateId, string fileName, string fileExtension, List<FileTagInitDto>? tags)
+    public async Task<(int id, string link)> InitFileMetadataAsync(int? templateId, int userId, string fileName, string fileExtension, List<FileTagInitDto>? tags)
     {
         var rulesDict = await ValidateAndGetTemplateRulesAsync(templateId, tags);
-
+        
         var file = new Models.Entities.File
         {
             TemplateId = templateId,
             Name = fileName,
+            CreatorId = userId,
+            LastEditorId = userId,
             FileExtension = fileExtension,
             Link = "temp_link",
             DateUpload = DateTime.Now,
@@ -159,6 +168,17 @@ public class FileService
         }
     }
 
+    public async Task<string?> MarkForDeletionAsync(int fileId)
+    {
+        var file = await _db.Files.FirstOrDefaultAsync(f => f.Id == fileId);
+        if (file == null) return null;
+
+        file.IsDeleted = true;
+        file.LastUpdated = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+        return file.Link;
+    }
+
     public async Task DeleteFileAsync(string link)
     {
         var file = await _db.Files.Include(f => f.Metadata).FirstOrDefaultAsync(f => f.Link == link);
@@ -170,17 +190,20 @@ public class FileService
         }
     }
 
-    public async Task<(int id, string newLink)> UpdateFileAsync(int fileId, int? templateId, List<FileTagInitDto>? tags, string? fileName, string? fileExtension)
+    public async Task<(int id, string newLink)> UpdateFileAsync(int fileId, int userId, int? templateId, List<FileTagInitDto>? tags, string? fileName, string? fileExtension)
     {
         var file = await _db.Files
             .Include(f => f.Metadata)
+            .Where(f => !f.IsDeleted)
             .FirstOrDefaultAsync(f => f.Id == fileId);
 
         if (file == null) return (0, "");
 
         if (!string.IsNullOrWhiteSpace(fileName)) file.Name = fileName;
         if (!string.IsNullOrWhiteSpace(fileExtension)) file.FileExtension = fileExtension;
+        file.TemplateId = templateId;
         file.LastUpdated = DateTime.Now;
+        file.LastEditorId = userId; 
 
         if (tags != null)
         {

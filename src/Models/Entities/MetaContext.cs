@@ -29,7 +29,7 @@ public partial class MetaContext : DbContext
 
     public virtual DbSet<User> Users { get; set; }
 
-    public virtual DbSet<Userfile> Userfiles { get; set; }
+    public virtual DbSet<Userrole> Userroles { get; set; }
 
     public virtual DbSet<Valuemetadatum> Valuemetadata { get; set; }
 
@@ -45,6 +45,7 @@ public partial class MetaContext : DbContext
             entity.ToTable("file");
 
             entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.CreatorId).HasColumnName("creator_id");
             entity.Property(e => e.DateUpload)
                 .HasColumnType("timestamp without time zone")
                 .HasColumnName("date_upload");
@@ -53,6 +54,7 @@ public partial class MetaContext : DbContext
                 .HasColumnName("file_extension");
             entity.Property(e => e.IsDeleted).HasColumnName("is_deleted");
             entity.Property(e => e.IsUploaded).HasColumnName("is_uploaded");
+            entity.Property(e => e.LastEditorId).HasColumnName("last_editor_id");
             entity.Property(e => e.LastUpdated)
                 .HasColumnType("timestamp without time zone")
                 .HasColumnName("last_updated");
@@ -63,6 +65,16 @@ public partial class MetaContext : DbContext
                 .HasMaxLength(255)
                 .HasColumnName("name");
             entity.Property(e => e.TemplateId).HasColumnName("template_id");
+
+            entity.HasOne(d => d.Creator).WithMany(p => p.FileCreators)
+                .HasForeignKey(d => d.CreatorId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("file_creator_id_fkey");
+
+            entity.HasOne(d => d.LastEditor).WithMany(p => p.FileLastEditors)
+                .HasForeignKey(d => d.LastEditorId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("file_last_editor_id_fkey");
 
             entity.HasOne(d => d.Template).WithMany(p => p.Files)
                 .HasForeignKey(d => d.TemplateId)
@@ -144,9 +156,9 @@ public partial class MetaContext : DbContext
 
         modelBuilder.Entity<Role>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("role_pkey");
+            entity.HasKey(e => e.Id).HasName("_role_pkey");
 
-            entity.ToTable("role");
+            entity.ToTable("_role");
 
             entity.Property(e => e.Id).HasColumnName("id");
             entity.Property(e => e.Name)
@@ -173,28 +185,28 @@ public partial class MetaContext : DbContext
             entity.ToTable("_user");
 
             entity.Property(e => e.Id).HasColumnName("id");
-            entity.Property(e => e.Login)
+            entity.Property(e => e.Name)
                 .HasMaxLength(255)
-                .HasColumnName("login");
+                .HasColumnName("name");
         });
 
-        modelBuilder.Entity<Userfile>(entity =>
+        modelBuilder.Entity<Userrole>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("userfile_pkey");
+            entity.HasKey(e => e.Id).HasName("userrole_pkey");
 
-            entity.ToTable("userfile");
+            entity.ToTable("userrole");
 
             entity.Property(e => e.Id).HasColumnName("id");
-            entity.Property(e => e.FileId).HasColumnName("file_id");
+            entity.Property(e => e.RoleId).HasColumnName("role_id");
             entity.Property(e => e.UserId).HasColumnName("user_id");
 
-            entity.HasOne(d => d.File).WithMany(p => p.Userfiles)
-                .HasForeignKey(d => d.FileId)
-                .HasConstraintName("userfile_file_id_fkey");
+            entity.HasOne(d => d.Role).WithMany(p => p.Userroles)
+                .HasForeignKey(d => d.RoleId)
+                .HasConstraintName("userrole_role_id_fkey");
 
-            entity.HasOne(d => d.User).WithMany(p => p.Userfiles)
+            entity.HasOne(d => d.User).WithMany(p => p.Userroles)
                 .HasForeignKey(d => d.UserId)
-                .HasConstraintName("userfile_user_id_fkey");
+                .HasConstraintName("userrole_user_id_fkey");
         });
 
         modelBuilder.Entity<Valuemetadatum>(entity =>

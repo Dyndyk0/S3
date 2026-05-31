@@ -10,7 +10,7 @@ export function Layout() {
     { to: '/keys', label: 'Ключи', icon: KeyIcon },
     { to: '/values', label: 'Значения', icon: Tag },
     { to: '/minio', label: 'Файлы в MinIO', icon: Database },
-    { to: '/auth', label: 'Регистрация (Тест)', icon: UserPlus },
+    { to: '/auth', label: 'Авторизация', icon: UserPlus },
   ];
 
   return (
