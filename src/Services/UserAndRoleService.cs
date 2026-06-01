@@ -31,6 +31,7 @@ public class UserAndRoleService
         var users = await query
             .Skip(filter.Offset ?? 0)
             .Take(filter.Limit ?? 20)
+            .OrderBy(u => u.Id)
             .Select(u => new UserDto(
                 u.Id,
                 u.Name,
