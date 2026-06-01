@@ -42,7 +42,7 @@ public class UserAndRoleService
         return (users, total);
     }
 
-    public async Task<UserAndRoleDto> GetMe(string? userName)
+    public async Task<UserAndRoleDto> GetMeAsync(string? userName)
     {
         if (string.IsNullOrEmpty(userName))
             throw new NotFoundException("User not found");
@@ -107,6 +107,18 @@ public class UserAndRoleService
             }
         }
 
+        await _db.SaveChangesAsync();
+    }
+
+    public async Task DeleteRolesAsync(List<int> ids)
+    {
+        var Roles = await _db.Roles.Include(r => r.Userroles).FirstOrDefaultAsync(r => ids.Contains(r.Id));
+        if (Roles != null)
+        {
+            _db.Userroles.RemoveRange(Roles.Userroles);
+            _db.Roles.Remove(Roles);
+        }
+        
         await _db.SaveChangesAsync();
     }
 }

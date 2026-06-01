@@ -96,8 +96,8 @@ export interface UserDto {
 }
 
 export interface RolePatchDto {
-  roleName: string;
-  operation: string;
+  roleIds: number[];
+  delete: boolean;
 }
 
 // For minio debug endpoint (assuming it returns an array of objects)

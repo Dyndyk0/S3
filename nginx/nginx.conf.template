@@ -22,8 +22,8 @@ http {
                          'Status: $status '
                          'Bytes: $body_bytes_sent '
                          'Time: $request_time s '
-                         'User: "$sent_http_x_user_id" '
-                         'File: "$sent_http_x_file_name"';
+                         'User: "$upstream_http_x_user_id" '
+                         'File: "$upstream_http_x_file_name"';
 
     server {
         listen 8080;
@@ -31,17 +31,20 @@ http {
         
         resolver 127.0.0.11 valid=5s ipv6=off;
 
+        access_log /var/log/nginx/access.log;
         access_log ${AUDIT_LOG_PATH} audit_log;  # тут указывать путь к логам
 
         ignore_invalid_headers off;
         client_max_body_size 0; # сделать ограничение на размер
         proxy_buffering off;
         proxy_redirect off;
+        proxy_hide_header X-User-Id;
+        proxy_hide_header X-File-Name;
 
         set $backend http://server:8080;
         set $minio_host ${MINIO_HOST}:${MINIO_PORT};
         set $minio_url http://$minio_host;
-
+        
         location / {
             proxy_set_header Host $host;
             proxy_set_header X-Real-IP $remote_addr;
@@ -85,8 +88,6 @@ http {
             # Скрываем внутренние заголовки MinIO от клиента
             proxy_hide_header x-amz-request-id;
             proxy_hide_header x-amz-id-2;
-            proxy_hide_header X-User-Id;
-            proxy_hide_header X-File-Name;
         }
 
         location = /auth-check {

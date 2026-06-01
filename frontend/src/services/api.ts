@@ -145,9 +145,8 @@ export const rolesApi = {
     return res.data;
   },
   createRole: async (name: string) => {
-    // If backend expects DTO, we might need to adjust, but let's assume it accepts query or body
-    const res = await api.post('/role', null, { params: { name }});
-    return res.data;
+    const res = await api.post('/role', { name }); 
+    return res.data; 
   }
 };
 

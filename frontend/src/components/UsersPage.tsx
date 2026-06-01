@@ -48,21 +48,20 @@ export function UsersPage() {
     setIsModalOpen(true);
   };
 
-  const toggleRole = async (roleName: string, currentlyHasRole: boolean) => {
+  const toggleRole = async (role: RoleDto, currentlyHasRole: boolean) => {
     if (!selectedUser) return;
     try {
       setUpdating(true);
-      const currentlyHasRole = (selectedUser.roles || []).some(r => r.name === roleName);
       const payload = {
-        roleName: roleName,
-        operation: currentlyHasRole ? 'remove' : 'add'
+        roleIds: [role.id],
+        delete: currentlyHasRole
       };
       await usersApi.updateUserRoles(selectedUser.name, payload);
       
       // Optimizely update local state
       const newUserRoles = currentlyHasRole 
-         ? (selectedUser.roles || []).filter(r => r.name !== roleName)
-         : [...(selectedUser.roles || []), { id: 0, name: roleName }];
+         ? (selectedUser.roles || []).filter(r => r.id !== role.id)
+         : [...(selectedUser.roles || []), role];
       
       const updatedUser = { ...selectedUser, roles: newUserRoles };
       setSelectedUser(updatedUser);
@@ -168,7 +167,7 @@ export function UsersPage() {
                            type="checkbox" 
                            checked={hasRole}
                            disabled={updating}
-                           onChange={() => toggleRole(r.name, hasRole)}
+                           onChange={() => toggleRole(r, hasRole)}
                            className="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500 disabled:opacity-50"
                         />
                         <span className="text-sm font-medium text-slate-800">{r.name}</span>

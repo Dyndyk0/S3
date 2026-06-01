@@ -21,7 +21,7 @@ public static class UserAndRoleEndpoints
 
         // GET /user/me
         group.MapGet("/user/me", async (ClaimsPrincipal user, UserAndRoleService db) => {
-            var me = await db.GetMe(user.Identity?.Name);
+            var me = await db.GetMeAsync(user.Identity?.Name);
             return Results.Ok(me);
         });
 
@@ -40,10 +40,19 @@ public static class UserAndRoleEndpoints
         .RequireAuthorization("RequireAdmin");
 
         // POST /role
-        group.MapPost("/role", async ([FromBody] string name, UserAndRoleService db) => {
-            if (string.IsNullOrWhiteSpace(name))
+        group.MapPost("/role", async (RolePostDto dto, UserAndRoleService db) => {
+            if (string.IsNullOrWhiteSpace(dto.Name))
                 return Results.BadRequest(new { message = "Name is required" });
-            await db.CreateRolesAsync(name);
+            await db.CreateRolesAsync(dto.Name);
+            return Results.Ok();
+        })
+        .RequireAuthorization("RequireAdmin");
+
+        // DELETE /role
+        group.MapDelete("/role", async ([FromBody] List<int> ids, UserAndRoleService db) => {
+            if (ids.Count == 0)
+                return Results.BadRequest(new { message = "ids is required" });
+            await db.DeleteRolesAsync(ids);
             return Results.Ok();
         })
         .RequireAuthorization("RequireAdmin");
