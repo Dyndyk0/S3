@@ -52,6 +52,7 @@ http {
         }
 
         location /api/minio/ {
+            auth_request /api/auth-check; 
             limit_except PUT { deny all; }
             #client_max_body_size 500M; 
             proxy_set_header Authorization "";
@@ -86,6 +87,19 @@ http {
             proxy_hide_header x-amz-id-2;
             proxy_hide_header X-User-Id;
             proxy_hide_header X-File-Name;
+        }
+
+        location = /auth-check {
+            internal; # Этот адрес недоступен клиентам из интернета напрямую
+            
+            proxy_pass $backend/api/auth/nginx-check;
+            
+            proxy_pass_request_body off; 
+            proxy_set_header Content-Length "";
+            
+            # Передаем оригинальный URI запроса, чтобы при необходимости бэкенд мог проверить 
+            # доступ пользователя именно к конкретному запрашиваемому файлу
+            proxy_set_header X-Original-URI $request_uri; 
         }
     }
 }

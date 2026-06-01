@@ -13,6 +13,7 @@ public static class AuthEndpoints
     public static void MapAuthEndpoints(this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api").WithTags("auth");
+        
         group.MapPost("/login", async (LoginRequest request, AuthService authService, HttpContext httpContext) =>
         {
             return await authService.LoginAsync(request.UserName, request.Password, httpContext);
@@ -24,5 +25,11 @@ public static class AuthEndpoints
             await httpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
             return Results.Ok();
         });
+
+        group.MapGet("/auth/nginx-check", (ClaimsPrincipal user) =>
+        {
+            return Results.Ok(); 
+        })
+        .RequireAuthorization();
     }
 }
