@@ -78,8 +78,8 @@ public static class FileEndpoints
         });
     
         // PATCH /file/{id}
-        group.MapPatch("/file/{id}", async (int id, MinioService storage, FileService db, HttpContext context) => {
-            string? fileLink = await db.MarkForDeletionAsync(id);
+        group.MapPatch("/file/{id}", async (int id, FilePatchDto req, MinioService storage, FileService db, HttpContext context) => {
+            string? fileLink = await db.MarkForDeletionAsync(id, req.IsDeleted);
             if (fileLink is null) return Results.NotFound($"The file with ID {id} was not found or already marked for deletion");
             context.Items["LogFileName"] = fileLink;
             return Results.Ok();

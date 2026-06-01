@@ -24,9 +24,9 @@ public class FileService
             .Include(f => f.Metadata).ThenInclude(m => m.Valuemetadata)
             .Include(f => f.Creator)
             .Include(f => f.LastEditor)
+            .Include(f => f.Template)
             .Where(f => f.IsDeleted == filter.VisibleDeleted)
             //.Where(f => f.IsUploaded)
-            .Where(f => !f.IsDeleted && f.IsUploaded)
             .AsQueryable();
 
         if (filter.DateUploadFrom.HasValue)
@@ -68,6 +68,7 @@ public class FileService
             "dateupload" => filter.SortDescending ? query.OrderByDescending(f => f.DateUpload) : query.OrderBy(f => f.DateUpload),
             "lastupdated" => filter.SortDescending ? query.OrderByDescending(f => f.LastUpdated) : query.OrderBy(f => f.LastUpdated),
             "name" => filter.SortDescending ? query.OrderByDescending(f => f.Name) : query.OrderBy(f => f.Name),
+            "fileextension" => filter.SortDescending ? query.OrderByDescending(f => f.FileExtension) : query.OrderBy(f => f.FileExtension),
             _ => query.OrderByDescending(f => f.LastUpdated)
         };
 
@@ -82,6 +83,7 @@ public class FileService
         {
             Id = f.Id,
             TemplateId = f.TemplateId,
+            TemplateName = f.Template?.Name,
             Creator = f.Creator.Name,
             LastEditor = f.LastEditor.Name,
             Name = f.Name,
@@ -163,18 +165,18 @@ public class FileService
         if (file != null)
         {
             file.IsUploaded = true;
-            file.LastUpdated = DateTime.UtcNow;
+            file.LastUpdated = DateTime.Now;
             await _db.SaveChangesAsync();
         }
     }
 
-    public async Task<string?> MarkForDeletionAsync(int fileId)
+    public async Task<string?> MarkForDeletionAsync(int fileId, bool isDeleted = true)
     {
         var file = await _db.Files.FirstOrDefaultAsync(f => f.Id == fileId);
         if (file == null) return null;
 
-        file.IsDeleted = true;
-        file.LastUpdated = DateTime.UtcNow;
+        file.IsDeleted = isDeleted;
+        file.LastUpdated = DateTime.Now;
         await _db.SaveChangesAsync();
         return file.Link;
     }

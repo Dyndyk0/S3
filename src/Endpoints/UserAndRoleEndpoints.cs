@@ -21,7 +21,8 @@ public static class UserAndRoleEndpoints
 
         // GET /user/me
         group.MapGet("/user/me", async (ClaimsPrincipal user, UserAndRoleService db) => {
-            return Results.Ok(user.Identity?.Name);
+            var me = await db.GetMe(user.Identity?.Name);
+            return Results.Ok(me);
         });
 
         // PATCH /user/{name}

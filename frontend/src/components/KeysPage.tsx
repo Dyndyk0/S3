@@ -6,8 +6,10 @@ import { Trash2, Plus, Key as KeyIcon, Search, Edit } from 'lucide-react';
 import { Modal } from './ui/Modal';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
+import { useAuth } from '../context/AuthContext';
 
 export function KeysPage() {
+  const { isAdmin } = useAuth();
   const [keys, setKeys] = useState<KeyMetadataDto[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [keyTypes, setKeyTypes] = useState<string[]>([]);
@@ -117,9 +119,11 @@ export function KeysPage() {
           <h2 className="text-2xl font-bold text-slate-800">Ключи метаданных</h2>
           <p className="text-slate-500 mt-1">Управление словарем ключей для тегирования файлов</p>
         </div>
-        <Button onClick={openCreateModal} className="gap-2">
-          <Plus className="w-4 h-4" /> Добавить ключ
-        </Button>
+        {isAdmin && (
+          <Button onClick={openCreateModal} className="gap-2">
+            <Plus className="w-4 h-4" /> Добавить ключ
+          </Button>
+        )}
       </div>
 
       <form onSubmit={handleSearch} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row gap-4 sm:items-center">
@@ -160,15 +164,19 @@ export function KeysPage() {
               {keys.map((key) => (
                 <tr key={key.id} className="hover:bg-slate-50 transition-colors">
                   <td className="px-6 py-4 text-sm text-slate-500">{key.id}</td>
-                  <td className="px-6 py-4 text-sm font-medium text-slate-900">{key.name}</td>
+                  <td className="px-6 py-4 text-sm font-medium text-slate-900 max-w-sm truncate" title={key.name}>{key.name}</td>
                   <td className="px-6 py-4 text-sm text-slate-500">{key.dataType || '—'}</td>
                   <td className="px-6 py-4 text-right">
-                    <Button variant="ghost" size="icon" className="text-slate-500 hover:text-slate-800 hover:bg-slate-100" onClick={() => openEditModal(key)}>
-                      <Edit className="w-4 h-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-600 hover:bg-red-50" onClick={() => handleDelete(key.id)}>
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                    {isAdmin && (
+                      <>
+                        <Button variant="ghost" size="icon" className="text-slate-500 hover:text-slate-800 hover:bg-slate-100" onClick={() => openEditModal(key)}>
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-600 hover:bg-red-50" onClick={() => handleDelete(key.id)}>
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </>
+                    )}
                   </td>
                 </tr>
               ))}

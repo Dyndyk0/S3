@@ -8,6 +8,8 @@ export interface FileDto {
   name: string;
   templateId?: number;
   templateName?: string;
+  creator?: string;
+  lastEditor?: string;
   fileExtension?: string;
   lastUpdated?: string;
   dateUpload?: string;
@@ -81,6 +83,21 @@ export interface TemplateKeyDto {
 export interface CreateTemplateDto {
   name: string;
   keys: TemplateKeyDto[];
+}
+
+export interface RoleDto {
+  id: number;
+  name: string;
+}
+
+export interface UserDto {
+  name: string;
+  roles?: RoleDto[];
+}
+
+export interface RolePatchDto {
+  roleName: string;
+  operation: string;
 }
 
 // For minio debug endpoint (assuming it returns an array of objects)

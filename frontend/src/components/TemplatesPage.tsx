@@ -6,8 +6,10 @@ import { Search, Trash2, Plus, LayoutTemplate, X, Edit } from 'lucide-react';
 import { Modal } from './ui/Modal';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
+import { useAuth } from '../context/AuthContext';
 
 export function TemplatesPage() {
+  const { isAdmin } = useAuth();
   const [templates, setTemplates] = useState<TemplateDto[]>([]);
   const [keys, setKeys] = useState<KeyMetadataDto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -164,9 +166,11 @@ export function TemplatesPage() {
           <h2 className="text-2xl font-bold text-slate-800">Шаблоны</h2>
           <p className="text-slate-500 mt-1">Управление шаблонами метаданных</p>
         </div>
-        <Button onClick={openCreateModal} className="gap-2">
-          <Plus className="w-4 h-4" /> Создать шаблон
-        </Button>
+        {isAdmin && (
+          <Button onClick={openCreateModal} className="gap-2">
+            <Plus className="w-4 h-4" /> Создать шаблон
+          </Button>
+        )}
       </div>
 
       <form onSubmit={handleSearchSubmit} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex gap-4 items-center">
@@ -199,14 +203,18 @@ export function TemplatesPage() {
                 {templates.map((template) => (
                   <tr key={template.id} className="hover:bg-slate-50 transition-colors">
                     <td className="px-6 py-4 text-sm text-slate-500">{template.id}</td>
-                    <td className="px-6 py-4 text-sm font-medium text-slate-900">{template.name}</td>
+                    <td className="px-6 py-4 text-sm font-medium text-slate-900 max-w-sm truncate" title={template.name}>{template.name}</td>
                     <td className="px-6 py-4 text-right">
-                      <Button variant="ghost" size="icon" className="text-slate-500 hover:text-slate-800 hover:bg-slate-100" onClick={() => openEditModal(template)}>
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-600 hover:bg-red-50" onClick={() => handleDelete(template.id)}>
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                      {isAdmin && (
+                        <>
+                          <Button variant="ghost" size="icon" className="text-slate-500 hover:text-slate-800 hover:bg-slate-100" onClick={() => openEditModal(template)}>
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="text-red-500 hover:text-red-600 hover:bg-red-50" onClick={() => handleDelete(template.id)}>
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </>
+                      )}
                     </td>
                   </tr>
                 ))}

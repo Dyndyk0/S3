@@ -25,6 +25,7 @@ public record FileDto {
 public record FileInitDto(int? TemplateId, string FileName, string FileExtension, List<FileTagInitDto>? Tags);
 public record FileTagInitDto(int KeyId, string Value);
 public record FileUpdateDto(int? TemplateId, string FileName, string FileExtension, bool? UpdateFile, List<FileTagInitDto>? Tags);
+public record FilePatchDto(bool IsDeleted);
 public record TagFilterDto(int KeyId, string Value);
 public record FileFilterDto(
     int? Offset,

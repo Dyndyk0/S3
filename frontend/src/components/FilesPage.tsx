@@ -39,8 +39,7 @@ export function FilesPage() {
   const [currentSelectedTagId, setCurrentSelectedTagId] = useState<string>('');
 
   const [searchTemplateId, setSearchTemplateId] = useState<string>('');
-  const [visibleDeleted, setVisibleDeleted] = useState(false);
-  const [showTemplateName, setShowTemplateName] = useState(true);
+  const [showTemplateName, setShowTemplateName] = useState(() => localStorage.getItem('fileCols_tpl') !== 'false');
 
   // Pagination for files
   const [page, setPage] = useState(1);
@@ -52,9 +51,20 @@ export function FilesPage() {
   const [sortDesc, setSortDesc] = useState<boolean>(true);
 
   // Column visibility
-  const [showExtension, setShowExtension] = useState(true);
-  const [showUploadDate, setShowUploadDate] = useState(true);
-  const [showUpdateDate, setShowUpdateDate] = useState(true);
+  const [showExtension, setShowExtension] = useState(() => localStorage.getItem('fileCols_ext') !== 'false');
+  const [showUploadDate, setShowUploadDate] = useState(() => localStorage.getItem('fileCols_upl') !== 'false');
+  const [showUpdateDate, setShowUpdateDate] = useState(() => localStorage.getItem('fileCols_upd') !== 'false');
+  const [showCreator, setShowCreator] = useState(() => localStorage.getItem('fileCols_creator') !== 'false');
+  const [showLastEditor, setShowLastEditor] = useState(() => localStorage.getItem('fileCols_editor') !== 'false');
+
+  useEffect(() => {
+    localStorage.setItem('fileCols_tpl', showTemplateName.toString());
+    localStorage.setItem('fileCols_ext', showExtension.toString());
+    localStorage.setItem('fileCols_upl', showUploadDate.toString());
+    localStorage.setItem('fileCols_upd', showUpdateDate.toString());
+    localStorage.setItem('fileCols_creator', showCreator.toString());
+    localStorage.setItem('fileCols_editor', showLastEditor.toString());
+  }, [showTemplateName, showExtension, showUploadDate, showUpdateDate, showCreator, showLastEditor]);
 
   // values and keys for metadata form rendering
   const [allValues, setAllValues] = useState<ValueMetadataDto[]>([]);
@@ -112,7 +122,6 @@ export function FilesPage() {
       if (searchName.trim()) params.FileName = searchName.trim();
       if (searchExt.trim()) params.FileExtension = searchExt.trim();
       if (searchTemplateId) params.TemplateId = parseInt(searchTemplateId);
-      params.VisibleDeleted = visibleDeleted;
       
       if (tagSearches.length > 0) {
         params.TagsJson = JSON.stringify(tagSearches.map(val => ({ KeyId: val.keyId, Value: val.value })));
@@ -383,12 +392,13 @@ export function FilesPage() {
   };
 
   const handleDelete = async (id: number) => {
-    if (confirm('Вы уверены, что хотите удалить файл?')) {
+    if (confirm('Вы уверены, что хотите удалить файл в корзину?')) {
       try {
-        await filesApi.deleteFile(id);
+        await filesApi.patchFileStatus(id, true);
         fetchFiles();
       } catch (e) {
         console.error(e);
+        alert('Ошибка при перемещении в корзину. Возможно, нет прав.');
       }
     }
   };
@@ -601,6 +611,14 @@ export function FilesPage() {
             <input type="checkbox" checked={showUpdateDate} onChange={e => setShowUpdateDate(e.target.checked)} className="rounded text-indigo-600 focus:ring-indigo-500" />
             <span className="text-slate-700">Показывать "Дата обновления"</span>
           </label>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" checked={showCreator} onChange={e => setShowCreator(e.target.checked)} className="rounded text-indigo-600 focus:ring-indigo-500" />
+            <span className="text-slate-700">Показывать "Загрузил"</span>
+          </label>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" checked={showLastEditor} onChange={e => setShowLastEditor(e.target.checked)} className="rounded text-indigo-600 focus:ring-indigo-500" />
+            <span className="text-slate-700">Показывать "Отредактировал"</span>
+          </label>
         </div>
       )}
 
@@ -639,18 +657,6 @@ export function FilesPage() {
               <option value="">Любой</option>
               {templates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
             </Select>
-          </div>
-
-          <div className="space-y-1 flex items-center pt-5">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input 
-                type="checkbox" 
-                checked={visibleDeleted} 
-                onChange={e => setVisibleDeleted(e.target.checked)} 
-                className="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4"
-              />
-              <span className="text-sm font-medium text-slate-700">Включая удаленные</span>
-            </label>
           </div>
 
           <div className="space-y-1 lg:col-span-2">
@@ -765,20 +771,31 @@ export function FilesPage() {
           <div className="p-8 text-center text-slate-500">Загрузка...</div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse min-w-max">
+            <table className="w-full text-left border-collapse min-w-full">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-200">
                   <th className="px-6 py-4 font-medium text-slate-600 text-sm">ID</th>
                   <th className="px-6 py-4 font-medium text-slate-600 text-sm cursor-pointer hover:bg-slate-100 transition-colors select-none group" onClick={() => applySort('name')}>
                     <span className="group-hover:text-indigo-600 transition-colors">Имя файла{renderSortIcon('name')}</span>
                   </th>
-                  {showTemplateName && (
-                    <th className="px-6 py-4 font-medium text-slate-600 text-sm cursor-pointer hover:bg-slate-100 transition-colors select-none group" onClick={() => applySort('templatename')}>
-                      <span className="group-hover:text-indigo-600 transition-colors">Шаблон{renderSortIcon('templatename')}</span>
+                  {/* <th className="px-6 py-4 font-medium text-slate-600 text-sm cursor-pointer hover:bg-slate-100 transition-colors select-none group" onClick={() => applySort('templatename')}>
+                    <span className="group-hover:text-indigo-600 transition-colors">Шаблон{renderSortIcon('templatename')}</span>
+                  </th> */}
+                  <th className="px-6 py-4 font-medium text-slate-600 text-sm">Шаблон</th>
+                  {showCreator && (
+                    <th className="px-6 py-4 font-medium text-slate-600 text-sm cursor-pointer hover:bg-slate-100 transition-colors select-none group" onClick={() => applySort('creator')}>
+                      <span className="group-hover:text-indigo-600 transition-colors">Загрузил{renderSortIcon('creator')}</span>
+                    </th>
+                  )}
+                  {showLastEditor && (
+                    <th className="px-6 py-4 font-medium text-slate-600 text-sm cursor-pointer hover:bg-slate-100 transition-colors select-none group" onClick={() => applySort('lasteditor')}>
+                      <span className="group-hover:text-indigo-600 transition-colors">Отредактировал{renderSortIcon('lasteditor')}</span>
                     </th>
                   )}
                   {showExtension && (
-                    <th className="px-6 py-4 font-medium text-slate-600 text-sm">Расширение</th>
+                    <th className="px-6 py-4 font-medium text-slate-600 text-sm cursor-pointer hover:bg-slate-100 transition-colors select-none group" onClick={() => applySort('fileextension')}>
+                      <span className="group-hover:text-indigo-600 transition-colors">Расширение{renderSortIcon('fileextension')}</span>
+                    </th>
                   )}
                   {showUploadDate && (
                     <th className="px-6 py-4 font-medium text-slate-600 text-sm cursor-pointer hover:bg-slate-100 transition-colors select-none group" onClick={() => applySort('dateupload')}>
@@ -798,9 +815,15 @@ export function FilesPage() {
                 {files.map((file) => (
                   <tr key={file.id} className="hover:bg-slate-50 transition-colors">
                     <td className="px-6 py-4 text-sm text-slate-500">{file.id}</td>
-                    <td className="px-6 py-4 text-sm font-medium text-slate-900">{file.name}</td>
-                    {showTemplateName && (
-                      <td className="px-6 py-4 text-sm text-slate-500">{file.templateName || '—'}</td>
+                    <td className="px-6 py-4 text-sm font-medium text-slate-900 max-w-xs truncate" title={file.name}>{file.name}</td>
+                    {/* {showTemplateName && ( */}
+                      <td className="px-6 py-4 text-sm text-slate-500 max-w-xs truncate" title={file.templateName}>{file.templateName || '—'}</td>
+                    {/* )} */}
+                    {showCreator && (
+                      <td className="px-6 py-4 text-sm text-slate-500 max-w-xs truncate" title={file.creator}>{file.creator || '—'}</td>
+                    )}
+                    {showLastEditor && (
+                      <td className="px-6 py-4 text-sm text-slate-500 max-w-xs truncate" title={file.lastEditor}>{file.lastEditor || '—'}</td>
                     )}
                     {showExtension && (
                       <td className="px-6 py-4 text-sm text-slate-500 uppercase">
@@ -808,20 +831,21 @@ export function FilesPage() {
                       </td>
                     )}
                     {showUploadDate && (
-                      <td className="px-6 py-4 text-sm text-slate-500">
+                      <td className="px-6 py-4 text-sm text-slate-500 whitespace-nowrap">
                         {file.dateUpload ? format(new Date(file.dateUpload), 'dd.MM.yyyy HH:mm') : '—'}
                       </td>
                     )}
                     {showUpdateDate && (
-                      <td className="px-6 py-4 text-sm text-slate-500">
+                      <td className="px-6 py-4 text-sm text-slate-500 whitespace-nowrap">
                         {file.lastUpdated ? format(new Date(file.lastUpdated), 'dd.MM.yyyy HH:mm') : '—'}
                       </td>
                     )}
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 max-w-sm">
                       <div className="flex flex-wrap gap-2">
                         {file.tags?.map((t, idx) => (
-                          <span key={idx} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-indigo-50 text-indigo-700 ring-1 ring-inset ring-indigo-700/10">
-                            {t.key ? `${t.key}: ` : ''}{t.value}
+                          <span key={idx} className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-indigo-50 text-indigo-700 ring-1 ring-inset ring-indigo-700/10 max-w-full truncate block" title={`${t.key ? `${t.key}: ` : ''}${t.value}`}>
+                            {t.key ? <span className="font-semibold text-indigo-900 mr-1 truncate block">{t.key}:</span> : ''}
+                            <span className="truncate block">{t.value}</span>
                           </span>
                         ))}
                         {(!file.tags || file.tags.length === 0) && <span className="text-slate-400 text-sm">—</span>}
@@ -844,7 +868,7 @@ export function FilesPage() {
                 ))}
                 {files.length === 0 && (
                   <tr>
-                    <td colSpan={((showTemplateName ? 1 : 0) + (showExtension ? 1 : 0) + (showUpdateDate ? 1 : 0) + (showUploadDate ? 1 : 0) + 4)} className="px-6 py-12 text-center text-slate-500">
+                    <td colSpan={((showTemplateName ? 1 : 0) + (showCreator ? 1 : 0) + (showLastEditor ? 1 : 0) + (showExtension ? 1 : 0) + (showUpdateDate ? 1 : 0) + (showUploadDate ? 1 : 0) + 4)} className="px-6 py-12 text-center text-slate-500">
                       <FileUp className="w-12 h-12 text-slate-300 mx-auto mb-4" />
                       <p>По вашему запросу файлов не найдено</p>
                     </td>

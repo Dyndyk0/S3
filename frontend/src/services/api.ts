@@ -36,6 +36,10 @@ export const filesApi = {
     const res = await api.delete(`/file/${id}`);
     return res.data;
   },
+  patchFileStatus: async (id: number, isDeleted: boolean) => {
+    const res = await api.patch(`/file/${id}`, { isDeleted: isDeleted });
+    return res.data;
+  },
   getFileDownloadUrl: (id: number) => {
     // Return relative URL for downloads so browser can start navigation/download
     return `/api/file/${id}`;
@@ -118,6 +122,31 @@ export const templatesApi = {
   },
   deleteTemplate: async (id: number) => {
     const res = await api.delete(`/templates/${id}`);
+    return res.data;
+  }
+};
+
+export const usersApi = {
+  getUsers: async (params?: any) => {
+    // We assume backend returns PaginatedResponse<UserDto> or similar. We'll type it correctly.
+    const res = await api.get('/user', { params });
+    return res.data;
+  },
+  updateUserRoles: async (name: string, data: any) => {
+    // data should be RolePatchDto according to swagger
+    const res = await api.patch(`/user/${name}`, data);
+    return res.data;
+  }
+};
+
+export const rolesApi = {
+  getRoles: async (params?: any) => {
+    const res = await api.get('/role', { params });
+    return res.data;
+  },
+  createRole: async (name: string) => {
+    // If backend expects DTO, we might need to adjust, but let's assume it accepts query or body
+    const res = await api.post('/role', null, { params: { name }});
     return res.data;
   }
 };

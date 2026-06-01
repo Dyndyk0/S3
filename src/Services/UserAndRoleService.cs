@@ -41,6 +41,22 @@ public class UserAndRoleService
         return (users, total);
     }
 
+    public async Task<UserAndRoleDto> GetMe(string? userName)
+    {
+        if (string.IsNullOrEmpty(userName))
+            throw new NotFoundException("User not found");
+
+        UserAndRoleDto user = await _db.Users
+            .Where(u => u.Name == userName)
+            .Select(u => new UserAndRoleDto(
+                u.Name,
+                u.Userroles.Select(ur => new RoleDto(ur.Role.Id, ur.Role.Name)).ToList()
+            ))
+            .FirstOrDefaultAsync() ?? throw new NotFoundException("User not found");
+
+        return user;
+    }
+
     public async Task<(List<RoleDto> items, int total)> GetRolesAsync(RoleFilterDto filter)
     {
         var query = _db.Roles.AsQueryable();

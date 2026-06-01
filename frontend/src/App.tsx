@@ -11,8 +11,9 @@ import { TemplatesPage } from './components/TemplatesPage';
 import { KeysPage } from './components/KeysPage';
 import { ValuesPage } from './components/ValuesPage';
 import { MinioPage } from './components/MinioPage';
-
 import { AuthPage } from './components/AuthPage';
+import { TrashPage } from './components/TrashPage';
+import { UsersPage } from './components/UsersPage';
 
 export default function App() {
   return (
@@ -23,6 +24,8 @@ export default function App() {
           <Route path="templates" element={<TemplatesPage />} />
           <Route path="keys" element={<KeysPage />} />
           <Route path="values" element={<ValuesPage />} />
+          <Route path="trash" element={<TrashPage />} />
+          <Route path="users" element={<UsersPage />} />
           <Route path="minio" element={<MinioPage />} />
           <Route path="auth" element={<AuthPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />

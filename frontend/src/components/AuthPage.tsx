@@ -1,10 +1,14 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
 import { transformPassword } from '../utils/auth';
 import { authApi } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 export function AuthPage() {
+  const { user, refreshUser } = useAuth();
+  const navigate = useNavigate();
   const [userName, setUsername] = useState('');
   const [password, setPassword] = useState('');
   
@@ -13,21 +17,12 @@ export function AuthPage() {
   const [actionLog, setActionLog] = useState<{type: string, data: any} | null>(null);
 
   useEffect(() => {
-    checkContext();
-  }, []);
-
-  const checkContext = async () => {
-    try {
-      const user = await authApi.getMe();
-      if (typeof user === 'string') {
-         setCurrentUser(user);
-      } else {
-         setCurrentUser(null);
-      }
-    } catch {
-      setCurrentUser(null);
+    if (user) {
+       setCurrentUser(user.name);
+    } else {
+       setCurrentUser(null);
     }
-  };
+  }, [user]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,7 +34,8 @@ export function AuthPage() {
       const payload = { userName, password: transformedPassword };
       const res = await authApi.login(payload);
       setActionLog({ type: 'success', data: res });
-      checkContext();
+      await refreshUser();
+      navigate('/');
     } catch (err: any) {
       console.error(err);
       setActionLog({ type: 'error', data: err.response?.data || err.message || 'Ошибка входа' });
@@ -54,7 +50,7 @@ export function AuthPage() {
     try {
       await authApi.logout();
       setActionLog({ type: 'success', data: 'Успешный выход' });
-      setCurrentUser(null);
+      await refreshUser();
     } catch (err: any) {
       setActionLog({ type: 'error', data: 'Ошибка выхода' });
     } finally {
