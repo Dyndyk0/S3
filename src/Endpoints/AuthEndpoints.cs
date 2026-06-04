@@ -14,17 +14,11 @@ public static class AuthEndpoints
     {
         var group = app.MapGroup("/api").WithTags("auth");
         
-        group.MapPost("/login", async (LoginRequest request, AuthService authService, HttpContext httpContext) =>
-        {
-            return await authService.LoginAsync(request.UserName, request.Password, httpContext);
-        })
-        .AllowAnonymous();
-
-        group.MapPost("/logout", async (HttpContext httpContext) =>
-        {
-            await httpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-            return Results.Ok();
-        });
+        // group.MapPost("/logout", async (HttpContext httpContext) =>
+        // {
+        //     await httpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+        //     return Results.Ok();
+        // });
 
         group.MapGet("/auth/nginx-check", (ClaimsPrincipal user) =>
         {

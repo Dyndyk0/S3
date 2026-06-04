@@ -3,7 +3,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
 using XPEHb.Services;
 using XPEHb.Middlewares;
 using XPEHb.Endpoints;
@@ -17,7 +18,7 @@ builder.Services.AddDbContext<XPEHb.Models.Entities.MetaContext>(options => opti
 builder.Services.AddMinio(options => {
     options.WithEndpoint(minioEndpoint);
     options.WithCredentials(Environment.GetEnvironmentVariable("MINIO_USER"), Environment.GetEnvironmentVariable("MINIO_PASSWORD"));
-    options.WithCredentials(Environment.GetEnvironmentVariable("ACCESS_KEY"), Environment.GetEnvironmentVariable("SECRET_KEY"));
+    //options.WithCredentials(Environment.GetEnvironmentVariable("ACCESS_KEY"), Environment.GetEnvironmentVariable("SECRET_KEY"));
     options.WithSSL(false);
 });
 
@@ -26,11 +27,26 @@ builder.Services.AddScoped<TemplateService>();
 builder.Services.AddScoped<ValueMetadataService>();
 builder.Services.AddScoped<KeyMetadataService>();
 builder.Services.AddScoped<FileService>();
-builder.Services.AddScoped<AuthService>();
-builder.Services.AddScoped<UserAndRoleService>();
-
+builder.Services.AddScoped<UserService>();
+builder.Services.AddScoped<RoleService>();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.Authority = Environment.GetEnvironmentVariable("AUTH_URL"); 
+        
+        // Идентификатор вашего API (защищаемого ресурса)
+        //options.Audience = "s3-api";
+
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,   // Проверять, что токен выпущен именно этим сервисом
+            ValidateLifetime = true, // Проверять срок действия (если истек — вернет 401)
+            ClockSkew = TimeSpan.FromMinutes(1) // Допустимое расхождение времени на серверах
+        };
+    });
 
 builder.Services.AddAuthorizationBuilder()
     .AddPolicy("RequireAdmin", policy => policy.RequireRole("admin"))
@@ -39,26 +55,7 @@ builder.Services.AddAuthorizationBuilder()
         .RequireAuthenticatedUser()
         .Build());
 
-builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
-    .AddCookie(options =>
-    {
-        options.Cookie.Name = "XPEHb.AuthCookie";
-        
-        options.ExpireTimeSpan = TimeSpan.FromDays(1); 
-        
-        options.SlidingExpiration = false; 
-
-        options.Events.OnRedirectToLogin = context =>
-        {
-            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-            return context.Response.CompleteAsync();
-        };
-        options.Events.OnRedirectToAccessDenied = context =>
-        {
-            context.Response.StatusCode = StatusCodes.Status403Forbidden;
-            return context.Response.CompleteAsync();
-        };
-    });
+builder.Services.AddTransient<IClaimsTransformation, LocalClaimsTransformation>();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -82,7 +79,8 @@ app.MapTemplateEndpoints();
 app.MapKeyMetadataEndpoints();
 app.MapValueMetadataEndpoints();
 app.MapMinioEndpoints();
-app.MapUserAndRoleEndpoints();
+app.MapRoleEndpoints();
+app.MapUserEndpoints();
 app.MapAuthEndpoints();
 
 app.MapFallbackToFile("index.html").AllowAnonymous();

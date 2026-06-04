@@ -1,0 +1,36 @@
+# Используем версию на базе Debian (bookworm), так как Oracle не работает на Alpine
+FROM postgres:18-bookworm
+
+# Устанавливаем зависимости: pg_cron, компиляторы и утилиты
+RUN apt-get update && apt-get install -y \
+    postgresql-18-cron \
+    postgresql-server-dev-18 \
+    build-essential \
+    libaio1 \
+    wget \
+    unzip \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /opt/oracle
+
+# Скачиваем Oracle Instant Client (Basic и SDK нужны для сборки oracle_fdw)
+RUN wget https://download.oracle.com/otn_software/linux/instantclient/2112000/instantclient-basiclite-linux.x64-21.12.0.0.0dbru.zip && \
+    wget https://download.oracle.com/otn_software/linux/instantclient/2112000/instantclient-sdk-linux.x64-21.12.0.0.0dbru.zip && \
+    unzip instantclient-basiclite-linux.x64-21.12.0.0.0dbru.zip && \
+    unzip instantclient-sdk-linux.x64-21.12.0.0.0dbru.zip && \
+    rm *.zip
+
+# Настраиваем системные пути, чтобы Postgres видел библиотеки Oracle
+ENV ORACLE_HOME=/opt/oracle/instantclient_21_12
+ENV LD_LIBRARY_PATH=$ORACLE_HOME
+RUN sh -c "echo /opt/oracle/instantclient_21_12 > /etc/ld.so.conf.d/oracle-instantclient.conf" && \
+    ldconfig
+
+# Скачиваем исходники oracle_fdw, компилируем и устанавливаем в Postgres
+RUN git clone https://github.com/laurenz/oracle_fdw.git /tmp/oracle_fdw && \
+    cd /tmp/oracle_fdw && \
+    make && make install && \
+    rm -rf /tmp/oracle_fdw
+
+WORKDIR /
