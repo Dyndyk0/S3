@@ -20,7 +20,7 @@ CREATE TABLE File (
     id SERIAL PRIMARY KEY,
     template_id INT,
     creator_id INT NOT NULL,
-    last_editor_id INT NOT NULL,
+    last_editor_id INT,
     name VARCHAR(255) NOT NULL,
     file_extension VARCHAR(255) NOT NULL,
     link VARCHAR(255) NOT NULL,

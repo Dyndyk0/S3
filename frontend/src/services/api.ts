@@ -48,7 +48,7 @@ export const filesApi = {
 
 export const authApi = {
   login: async (data: any) => {
-    const res = await api.post('/login', data);
+    const res = await api.post(process.env.AUTH_URL || "", data);
     return res.data;
   },
   logout: async () => {

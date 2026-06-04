@@ -85,12 +85,10 @@ public class FileService
             TemplateId = f.TemplateId,
             TemplateName = f.Template?.Name,
             Creator = f.Creator.Name,
-            LastEditor = f.LastEditor.Name,
             Name = f.Name,
             FileExtension = f.FileExtension,
             Link = f.Link,
             DateUpload = f.DateUpload,
-            LastUpdated = f.LastUpdated,
             Tags = f.Metadata.Select(m => new TagDto(
                 m.KeymetadataId, 
                 m.Keymetadata?.Name, 
