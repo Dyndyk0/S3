@@ -38,7 +38,8 @@ CREATE TABLE UserRole (
     user_id INT not null,
     role_id INT not null,
     FOREIGN KEY (user_id) REFERENCES _User(id),
-    FOREIGN KEY (role_id) REFERENCES _Role(id)
+    FOREIGN KEY (role_id) REFERENCES _Role(id),
+    UNIQUE(user_id, role_id)
 );
 
 -- CREATE TABLE UserGroup (

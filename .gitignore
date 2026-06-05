@@ -6,7 +6,6 @@ Properties/
 nginx.conf.template/
 nginx_logs/
 node_modules/
-frontend/src/utils/
 init-db/create-4.sql
 .env
 .git/
