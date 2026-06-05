@@ -83,9 +83,8 @@ export function AuthPage() {
         )}
       </div>
 
-      {!currentUser && (
-        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-          <form onSubmit={handleLogin} className="space-y-4">
+      <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+        <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-1">
               <label className="text-sm font-medium text-slate-700">Имя пользователя (Логин)</label>
               <Input 
@@ -111,7 +110,6 @@ export function AuthPage() {
             </Button>
           </form>
         </div>
-      )}
 
       {actionLog && (
         <div className="bg-slate-900 rounded-xl border border-slate-800 shadow-sm overflow-hidden p-4 space-y-4 text-sm font-mono text-slate-300">

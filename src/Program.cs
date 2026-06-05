@@ -18,7 +18,7 @@ builder.Services.AddDbContext<XPEHb.Models.Entities.MetaContext>(options => opti
 builder.Services.AddMinio(options => {
     options.WithEndpoint(minioEndpoint);
     options.WithCredentials(Environment.GetEnvironmentVariable("MINIO_USER"), Environment.GetEnvironmentVariable("MINIO_PASSWORD"));
-    //options.WithCredentials(Environment.GetEnvironmentVariable("ACCESS_KEY"), Environment.GetEnvironmentVariable("SECRET_KEY"));
+    options.WithCredentials(Environment.GetEnvironmentVariable("ACCESS_KEY"), Environment.GetEnvironmentVariable("SECRET_KEY"));
     options.WithSSL(false);
 });
 
@@ -37,7 +37,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     {
         options.Authority = Environment.GetEnvironmentVariable("AUTH_URL"); 
         
-        // Идентификатор вашего API (защищаемого ресурса)
+        // Идентификатор вашего API
         //options.Audience = "s3-api";
 
         options.TokenValidationParameters = new TokenValidationParameters

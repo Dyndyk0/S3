@@ -19,6 +19,14 @@ const api = axios.create({
   }
 });
 
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('access_token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
 export const filesApi = {
   getFiles: async (params?: any) => {
     const res = await api.get<PaginatedResponse<FileDto>>('/file', { params });
@@ -48,12 +56,19 @@ export const filesApi = {
 
 export const authApi = {
   login: async (data: any) => {
-    const res = await api.post(process.env.AUTH_URL || "", data);
+    const url = process.env.AUTH_URL || "";
+    const res = await api.post(url, data);
+    
+    // Save token
+    const token = res.data?.token || res.data?.accessToken || res.data?.access_token || (typeof res.data === 'string' ? res.data : null);
+    if (token) {
+      localStorage.setItem('access_token', token);
+    }
     return res.data;
   },
   logout: async () => {
-    const res = await api.post('/logout');
-    return res.data;
+    localStorage.removeItem('access_token');
+    return { success: true };
   },
   getMe: async () => {
     const res = await api.get('/user/me');
