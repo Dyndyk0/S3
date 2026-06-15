@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.AspNetCore.HttpOverrides;
 using XPEHb.Services;
 using XPEHb.Middlewares;
 using XPEHb.Endpoints;
@@ -42,8 +43,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
         options.TokenValidationParameters = new TokenValidationParameters
         {
-            ValidateIssuer = true,   // Проверять, что токен выпущен именно этим сервисом
-            ValidateLifetime = true, // Проверять срок действия (если истек — вернет 401)
+            ValidateIssuer = true,
+            ValidateLifetime = true,
             ClockSkew = TimeSpan.FromMinutes(1) // Допустимое расхождение времени на серверах
         };
     });
@@ -61,6 +62,11 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
+
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+});
 
 app.UseExceptionHandler();
 

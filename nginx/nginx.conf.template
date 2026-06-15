@@ -6,14 +6,12 @@ error_log  /var/log/nginx/error.log;
 pid        /var/run/nginx.pid;
 
 events {
-    worker_connections  4000; # Не забыть увеличить
+    worker_connections  4000; # Можно и увеличить
 }
 
 http {
     include       mime.types;
     default_type  application/octet-stream;
-
-    # Отключаем показ версии nginx в целях безопасности
     server_tokens off;
 
     log_format audit_log '$remote_addr - [$time_local] '
@@ -26,8 +24,25 @@ http {
                          'File: "$upstream_http_x_file_name"';
 
     server {
-        listen 8080;
+        listen 80;
+        server_name _; # Принимать запросы на любой IP/хост
+        return 301 https://$host$request_uri;
+    }
+
+    server {
+        listen 80;
         server_name _;
+
+        listen 443 ssl;
+        server_name localhost;
+
+        # Пути к сертификатам внутри контейнера Nginx
+        ssl_certificate /etc/nginx/certs/localhost.crt;
+        ssl_certificate_key /etc/nginx/certs/localhost.key;
+
+        # Рекомендуемые настройки безопасности
+        ssl_protocols TLSv1.2 TLSv1.3;
+        ssl_ciphers HIGH:!aNULL:!MD5;
         
         resolver 127.0.0.11 valid=5s ipv6=off;
 
@@ -35,7 +50,7 @@ http {
         access_log ${AUDIT_LOG_PATH} audit_log;  # тут указывать путь к логам
 
         ignore_invalid_headers off;
-        client_max_body_size 0; # сделать ограничение на размер
+        client_max_body_size 0;
         proxy_buffering off;
         proxy_redirect off;
         proxy_hide_header X-User-Id;
@@ -57,7 +72,7 @@ http {
         location /api/minio/ {
             auth_request /api/auth-check; 
             limit_except PUT { deny all; }
-            #client_max_body_size 500M; 
+            #client_max_body_size 500M;
             proxy_set_header Authorization "";
             proxy_buffering off;
             proxy_request_buffering off;
@@ -85,7 +100,6 @@ http {
 
             proxy_pass $minio_url;
             
-            # Скрываем внутренние заголовки MinIO от клиента
             proxy_hide_header x-amz-request-id;
             proxy_hide_header x-amz-id-2;
         }
