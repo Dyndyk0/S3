@@ -43,7 +43,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
         options.TokenValidationParameters = new TokenValidationParameters
         {
-            ValidateIssuer = true,
+            //ValidateIssuer = true,
             ValidateLifetime = true,
             ClockSkew = TimeSpan.FromMinutes(1) // Допустимое расхождение времени на серверах
         };
