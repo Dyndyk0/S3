@@ -26,18 +26,21 @@ public static class KeyMetadataEndpoints
         group.MapPost("/keymetadata", async (string name, MetadataType dataType, KeyMetadataService db) => {
             await db.CreateKeyMetadataAsync(name, dataType);
             return Results.Ok();
-        }).RequireAuthorization("RequireAdmin");
+        })
+        .RequireAuthorization("RequireAdmin");
 
         // PUT /keymetadata
         group.MapPut("/keymetadata", async (PutKeyMetadataDto dto, KeyMetadataService db) => {
             await db.UpdateKeyMetadataAsync(dto.Id, dto.Name);
             return Results.Ok();
-        }).RequireAuthorization("RequireAdmin");
+        })
+        .RequireAuthorization("RequireAdmin");
 
         // DELETE /keymetadata (возможно, стоит удалить, так как может нарушить целостность данных)
         group.MapDelete("/keymetadata", async (int id, KeyMetadataService db) => {
             await db.DeleteKeyMetadataAsync(id);
             return Results.Ok();
-        }).RequireAuthorization("RequireAdmin");
+        })
+        .RequireAuthorization("RequireAdmin");
     }
 }

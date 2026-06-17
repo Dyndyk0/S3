@@ -60,7 +60,7 @@ export const authApi = {
     const res = await api.post(url, data);
     
     // Save token
-    const token = res.data?.jwtToken || res.data?.token || res.data?.accessToken || res.data?.access_token || (typeof res.data === 'string' ? res.data : null);
+    const token = res.data?.jwtToken;
     if (token) {
       localStorage.setItem('access_token', token);
     }

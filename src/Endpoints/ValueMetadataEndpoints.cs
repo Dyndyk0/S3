@@ -20,18 +20,21 @@ public static class ValueMetadataEndpoints
         group.MapPost("/valuemetadata", async (int keyMetadataId, string name, ValueMetadataService db) => {
             await db.CreateValueMetadataAsync(keyMetadataId, name);
             return Results.Ok();
-        }).RequireAuthorization("RequireAdmin");
+        })
+        .RequireAuthorization("RequireAdmin");
 
         // PATCH /valuemetadata
         group.MapPatch("/valuemetadata", async (UpdateValueMetadataDto dto, ValueMetadataService db) => {
             await db.UpdateValueMetadataAsync(dto.Id, dto.Name);
             return Results.Ok();
-        }).RequireAuthorization("RequireAdmin");
+        })
+        .RequireAuthorization("RequireAdmin");
 
         // DELETE /valuemetadata (возможно, стоит удалить, так как может нарушить целостность данных)
         group.MapDelete("/valuemetadata", async (int id, ValueMetadataService db) => {
             await db.DeleteValueMetadataAsync(id);
             return Results.Ok();
-        }).RequireAuthorization("RequireAdmin");
+        })
+        .RequireAuthorization("RequireAdmin");
     }
 }
