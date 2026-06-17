@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.AspNetCore.HttpOverrides;
+using System.Text;
 using XPEHb.Services;
 using XPEHb.Middlewares;
 using XPEHb.Endpoints;
@@ -36,16 +37,27 @@ builder.Services.AddProblemDetails();
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
-        //options.Authority = Environment.GetEnvironmentVariable("AUTH_URL"); 
-        
-        // Идентификатор вашего API
-        //options.Audience = "s3-api";
+        options.RequireHttpsMetadata = false; 
+        options.SaveToken = true;
 
         options.TokenValidationParameters = new TokenValidationParameters
         {
-            //ValidateIssuer = true,
+            ValidateIssuer = true,
+            ValidIssuer = "KES",
+
+            ValidateAudience = true,
+            ValidAudience = "ESTD",
+
             ValidateLifetime = true,
-            ClockSkew = TimeSpan.FromMinutes(1) // Допустимое расхождение времени на серверах
+            ClockSkew = TimeSpan.FromMinutes(1),
+
+            // 2. Включаем валидацию ключа подписи
+            ValidateIssuerSigningKey = true,
+            
+            // 3. Передаем сам секретный ключ, которым подписывался токен
+            IssuerSigningKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(Environment.GetEnvironmentVariable("REACT_APP_KEY") ?? "")
+            )
         };
     });
 
