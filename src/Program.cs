@@ -36,7 +36,7 @@ builder.Services.AddProblemDetails();
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
-        options.Authority = Environment.GetEnvironmentVariable("AUTH_URL"); 
+        //options.Authority = Environment.GetEnvironmentVariable("AUTH_URL"); 
         
         // Идентификатор вашего API
         //options.Audience = "s3-api";
