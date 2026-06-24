@@ -41,9 +41,7 @@ public static class FileEndpoints
         group.MapPost("/file", async (FileInitDto req,  ClaimsPrincipal user, MinioService storage, FileService db, HttpContext context) => {
             string? userIdString = user.FindFirstValue(ClaimTypes.NameIdentifier);
 
-            if (userIdString == null)
-                return Results.Unauthorized();
-            if (int.TryParse(userIdString, out int userId))
+            if (!int.TryParse(userIdString, out int userId))
                 return Results.Forbid();
 
             (int id,string link) = await db.InitFileMetadataAsync(req.TemplateId, userId, req.FileName, req.FileExtension, req.Tags);
