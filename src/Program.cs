@@ -20,7 +20,7 @@ builder.Services.AddDbContext<XPEHb.Models.Entities.MetaContext>(options => opti
 builder.Services.AddMinio(options => {
     options.WithEndpoint(minioEndpoint);
     options.WithCredentials(Environment.GetEnvironmentVariable("MINIO_USER"), Environment.GetEnvironmentVariable("MINIO_PASSWORD"));
-    //options.WithCredentials(Environment.GetEnvironmentVariable("ACCESS_KEY"), Environment.GetEnvironmentVariable("SECRET_KEY"));
+    options.WithCredentials(Environment.GetEnvironmentVariable("MINIO_ACCESS_KEY"), Environment.GetEnvironmentVariable("MINIO_SECRET_KEY"));
     options.WithSSL(false);
 });
 
@@ -76,7 +76,6 @@ builder.Services.AddTransient<IClaimsTransformation, LocalClaimsTransformation>(
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
-    // 1. Описание схемы безопасности (все типы берутся напрямую из Microsoft.OpenApi)
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Name = "Authorization",
@@ -87,7 +86,6 @@ builder.Services.AddSwaggerGen(options =>
         Description = "Введите JWT-токен"
     });
 
-    // 2. Требование безопасности с использованием нового класса OpenApiSecuritySchemeReference и делегата
     options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
     {
         [new OpenApiSecuritySchemeReference("Bearer", document)] = new List<string>()

@@ -31,13 +31,6 @@ public class LocalClaimsTransformation : IClaimsTransformation
         var dbUser = await _db.Users.FirstOrDefaultAsync(u => u.Name == username);
         if (dbUser == null)
         {
-            // dbUser = new User 
-            // { 
-            //     Name = username
-            // };
-            // _db.Userroles.Add(new Userrole{ User = dbUser, RoleId = 2 });
-            // _db.Users.Add(dbUser);
-            // await _db.SaveChangesAsync();
             return principal;
         }
 
