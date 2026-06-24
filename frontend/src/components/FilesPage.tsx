@@ -449,6 +449,35 @@ export function FilesPage() {
     setSelectedValues({});
   };
 
+  const handleDownload = async (file: FileDto) => {
+    try {
+      const url = filesApi.getFileDownloadUrl(file.id);
+      const token = localStorage.getItem('access_token');
+      const response = await fetch(url, {
+        headers: {
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to download file');
+      }
+      
+      const blob = await response.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = file.name;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(downloadUrl);
+    } catch (e) {
+      console.error(e);
+      alert('Ошибка при скачивании файла');
+    }
+  };
+
   const getTagsArray = () => {
     return Object.entries(selectedValues)
       .flatMap(([kid, val]) => {
@@ -857,9 +886,9 @@ export function FilesPage() {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <a href={filesApi.getFileDownloadUrl(file.id)} download className="inline-flex items-center justify-center p-2 rounded-md transition-colors text-blue-600 hover:text-blue-700 hover:bg-blue-50">
+                        <button onClick={() => handleDownload(file)} className="inline-flex items-center justify-center p-2 rounded-md transition-colors text-blue-600 hover:text-blue-700 hover:bg-blue-50">
                           <Download className="w-4 h-4" />
-                        </a>
+                        </button>
                         <Button variant="ghost" size="icon" className="text-slate-500 hover:text-slate-800 hover:bg-slate-100" onClick={() => openEditModal(file)}>
                           <Edit className="w-4 h-4" />
                         </Button>
