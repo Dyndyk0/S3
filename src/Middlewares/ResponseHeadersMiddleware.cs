@@ -11,11 +11,11 @@ public class ResponseHeadersMiddleware
         _next = next;
     }
 
-    public async Task InvokeAsync(HttpContext context)
+    public async Task InvokeAsync(HttpContext context, ClaimsPrincipal principal)
     {
         context.Response.OnStarting(() =>
         {
-            string currentUserId = context.User.Identity?.Name ?? "-";
+            string currentUserId = principal.FindFirst("login")?.Value ?? "-";
             context.Response.Headers["X-User-Id"] = Uri.EscapeDataString(currentUserId);
 
             if (context.Items.TryGetValue("LogFileName", out var fileNameObj) && fileNameObj is string fileName)

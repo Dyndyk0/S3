@@ -17,13 +17,21 @@ export function UsersPage() {
   const [newRoleName, setNewRoleName] = useState('');
   const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
 
+  const [searchName, setSearchName] = useState('');
+  const [searchRole, setSearchRole] = useState('');
+
   const fetchUsersAndRoles = async () => {
     try {
       setLoading(true);
+      const params: any = { Limit: 100 };
+      if (searchName) params.Name = searchName;
+      if (searchRole) params.Role = searchRole;
+
       const [uRes, rRes] = await Promise.all([
-        usersApi.getUsers({ Limit: 100 }),
+        usersApi.getUsers(params),
         rolesApi.getRoles({ Limit: 100 })
       ]);
+
       
       const usersData = uRes && uRes.items ? uRes.items : (Array.isArray(uRes) ? uRes : []);
       const rolesData = rRes && rRes.items ? rRes.items : (Array.isArray(rRes) ? rRes : []);
@@ -100,6 +108,34 @@ export function UsersPage() {
         </div>
         <Button onClick={() => setIsRoleModalOpen(true)} className="gap-2">
           <Shield className="w-4 h-4" /> Добавить роль
+        </Button>
+      </div>
+
+      <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row gap-4 items-end">
+        <div className="flex-1 space-y-1 w-full">
+          <label className="text-sm font-medium text-slate-700">Поиск по имени</label>
+          <input 
+            type="text" 
+            value={searchName} 
+            onChange={(e) => setSearchName(e.target.value)} 
+            onKeyDown={(e) => e.key === 'Enter' && fetchUsersAndRoles()}
+            placeholder="Введите имя пользователя..." 
+            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+        </div>
+        <div className="flex-1 space-y-1 w-full">
+          <label className="text-sm font-medium text-slate-700">Поиск по роли</label>
+          <input 
+            type="text" 
+            value={searchRole} 
+            onChange={(e) => setSearchRole(e.target.value)} 
+            onKeyDown={(e) => e.key === 'Enter' && fetchUsersAndRoles()}
+            placeholder="Введите название роли..." 
+            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+        </div>
+        <Button onClick={fetchUsersAndRoles} className="w-full sm:w-auto">
+          Найти
         </Button>
       </div>
 

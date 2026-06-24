@@ -98,6 +98,10 @@ http {
             proxy_set_header Connection "";
             chunked_transfer_encoding off;
 
+            proxy_set_header Authorization "";
+
+            proxy_set_header Host $minio_host;
+
             proxy_pass $minio_url;
             
             proxy_hide_header x-amz-request-id;
@@ -105,7 +109,7 @@ http {
         }
 
         location = /auth-check {
-            internal; # Этот адрес недоступен клиентам из интернета напрямую
+            internal;
             
             proxy_pass $backend/api/auth/nginx-check;
             
