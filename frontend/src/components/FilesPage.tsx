@@ -467,7 +467,7 @@ export function FilesPage() {
       const downloadUrl = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = downloadUrl;
-      link.download = file.name;
+      link.download = file.name + '.' + file.fileExtension;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
