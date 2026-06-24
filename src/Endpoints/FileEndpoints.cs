@@ -29,10 +29,8 @@ public static class FileEndpoints
             var uri = new Uri(fullMinioUrl);
 
             var encodedFileLink = Uri.EscapeDataString(fileLink);
-            //var contentDisposition = $"attachment; filename=\"{encodedFileLink}\"; filename*=UTF-8''{encodedFileLink}";
 
             context.Response.Headers["X-Accel-Redirect"] = $"/internal-minio{uri.PathAndQuery}";
-            //context.Response.Headers["Content-Disposition"] = contentDisposition;
 
             return Results.Empty;
         });

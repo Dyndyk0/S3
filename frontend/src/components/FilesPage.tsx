@@ -500,12 +500,14 @@ export function FilesPage() {
 
       const result = await filesApi.initFile(payload);
       
+      const token = localStorage.getItem('access_token');
       // Upload directly to MinIO
       await fetch(result.uploadUrl, {
         method: 'PUT',
         body: selectedFile,
         headers: {
-          'Content-Type': selectedFile.type || 'application/octet-stream'
+          'Content-Type': selectedFile.type || 'application/octet-stream',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         }
       });
 
@@ -548,11 +550,13 @@ export function FilesPage() {
       const result = await filesApi.updateFile(editingFile.id, payload);
       
       if (result.uploadUrl && selectedFile) {
+        const token = localStorage.getItem('access_token');
         await fetch(result.uploadUrl, {
           method: 'PUT',
           body: selectedFile,
           headers: {
-            'Content-Type': selectedFile.type || 'application/octet-stream'
+            'Content-Type': selectedFile.type || 'application/octet-stream',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
           }
         });
       }

@@ -34,8 +34,8 @@ public class MinioService
             .WithObject(fileLink)
             .WithExpiry(3600)
             .WithHeaders(new Dictionary<string, string> {
-        { "response-content-disposition", "attachment; filename=" + fileName }
-    });
+                { "response-content-disposition", "attachment; filename=" + fileName }
+            });
         return await _client.PresignedGetObjectAsync(args);
     }
 
