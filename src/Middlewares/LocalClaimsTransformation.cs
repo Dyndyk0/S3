@@ -42,6 +42,8 @@ public class LocalClaimsTransformation : IClaimsTransformation
         var localIdentity = new ClaimsIdentity();
         
         localIdentity.AddClaim(new Claim("LocalClaimsLoaded", "true"));
+        
+        localIdentity.AddClaim(new Claim(ClaimTypes.NameIdentifier, dbUser.Id.ToString()));
 
         foreach (var roleName in userRoles)
         {

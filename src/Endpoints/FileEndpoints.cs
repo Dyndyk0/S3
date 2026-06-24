@@ -39,14 +39,14 @@ public static class FileEndpoints
 
         // POST /file
         group.MapPost("/file", async (FileInitDto req,  ClaimsPrincipal user, MinioService storage, FileService db, HttpContext context) => {
-            var userIdClaim = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-    
-            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out int currentUserId))
-            {
-                return Results.Unauthorized();
-            }
+            string? userIdString = user.FindFirstValue(ClaimTypes.NameIdentifier);
 
-            (int id,string link) = await db.InitFileMetadataAsync(req.TemplateId, currentUserId, req.FileName, req.FileExtension, req.Tags);
+            if (userIdString == null)
+                return Results.Unauthorized();
+            if (int.TryParse(userIdString, out int userId))
+                return Results.Forbid();
+
+            (int id,string link) = await db.InitFileMetadataAsync(req.TemplateId, userId, req.FileName, req.FileExtension, req.Tags);
 
             context.Items["LogFileName"] = link;
 
