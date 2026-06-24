@@ -21,7 +21,7 @@ public class LocalClaimsTransformation : IClaimsTransformation
             return principal;
         }
    
-        string? username = principal.Identity?.Name;
+        string? username = principal.FindFirst("login")?.Value;
         
         if (string.IsNullOrEmpty(username))
         {

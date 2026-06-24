@@ -21,7 +21,7 @@ public static class UserEndpoints
 
         // GET /user/me
         group.MapGet("/user/me", async (ClaimsPrincipal user, UserService db) => {
-            var me = await db.GetMeAsync(user.Identity?.Name);
+            var me = await db.GetMeAsync(user.FindFirst("login")?.Value);
             return Results.Ok(me);
         });
 

@@ -20,7 +20,7 @@ builder.Services.AddDbContext<XPEHb.Models.Entities.MetaContext>(options => opti
 builder.Services.AddMinio(options => {
     options.WithEndpoint(minioEndpoint);
     options.WithCredentials(Environment.GetEnvironmentVariable("MINIO_USER"), Environment.GetEnvironmentVariable("MINIO_PASSWORD"));
-    options.WithCredentials(Environment.GetEnvironmentVariable("ACCESS_KEY"), Environment.GetEnvironmentVariable("SECRET_KEY"));
+    //options.WithCredentials(Environment.GetEnvironmentVariable("ACCESS_KEY"), Environment.GetEnvironmentVariable("SECRET_KEY"));
     options.WithSSL(false);
 });
 
@@ -51,13 +51,16 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateLifetime = true,
             ClockSkew = TimeSpan.FromMinutes(1),
 
-            // 2. Включаем валидацию ключа подписи
-            ValidateIssuerSigningKey = true,
+            ValidateIssuerSigningKey = false,
+            RequireSignedTokens = false,
             
-            // 3. Передаем сам секретный ключ, которым подписывался токен
-            IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(Environment.GetEnvironmentVariable("REACT_APP_KEY") ?? "")
-            )
+            // IssuerSigningKey = new SymmetricSecurityKey(
+            //     Encoding.UTF8.GetBytes(Environment.GetEnvironmentVariable("JWT_SECRET_KEY") ?? "")
+            // )
+            SignatureValidator = delegate (string token, TokenValidationParameters parameters)
+            {
+                return new Microsoft.IdentityModel.JsonWebTokens.JsonWebToken(token);
+            }
         };
     });
 
@@ -71,7 +74,25 @@ builder.Services.AddAuthorizationBuilder()
 builder.Services.AddTransient<IClaimsTransformation, LocalClaimsTransformation>();
 
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(options =>
+{
+    // 1. Описание схемы безопасности (все типы берутся напрямую из Microsoft.OpenApi)
+    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header,
+        Description = "Введите JWT-токен"
+    });
+
+    // 2. Требование безопасности с использованием нового класса OpenApiSecuritySchemeReference и делегата
+    options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
+    {
+        [new OpenApiSecuritySchemeReference("Bearer", document)] = new List<string>()
+    });
+});
 
 var app = builder.Build();
 
