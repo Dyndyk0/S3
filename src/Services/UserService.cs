@@ -48,7 +48,7 @@ public class UserService
             throw new NotFoundException("User not found");
 
         UserAndRoleDto user = await _db.Users
-            .Where(u => u.Name == userName)
+            .Where(u => u.Name.ToLower() == userName.ToLower())
             .Select(u => new UserAndRoleDto(
                 u.Name,
                 u.Userroles.Select(ur => new RoleDto(ur.Role.Id, ur.Role.Name)).ToList()
