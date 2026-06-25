@@ -28,7 +28,7 @@ public class LocalClaimsTransformation : IClaimsTransformation
             return principal;
         }
 
-        var dbUser = await _db.Users.FirstOrDefaultAsync(u => u.Name == username);
+        var dbUser = await _db.Users.FirstOrDefaultAsync(u => u.Name.ToLower() == username.ToLower());
         if (dbUser == null)
         {
             return principal;
